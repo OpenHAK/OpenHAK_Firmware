@@ -27,7 +27,6 @@ Lazarus Lazarus;
 
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
-//#define DEBUG = 1
 
 String VERSION = "0.1.0";
 
@@ -108,7 +107,7 @@ typedef struct {
   uint8_t aux3;
 } Payload;
 
-Payload samples[512];
+Payload samples[512]; 
 
 uint16_t currentSample = 0;
 
