@@ -14,10 +14,10 @@
 
 */
 
-#define DEBUG 1
+#define DEBUG 0
 #include "OpenHAK_Definitions.h"
 #include <Wire.h>
-#include <filters.h>
+#include <filters.h> //https://github.com/MartinBloedorn/libFilter
 #include <BMI160Gen.h>
 #include "QuickStats.h"
 //#include <TimeLib.h>
