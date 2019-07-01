@@ -30,7 +30,7 @@ boolean captureHR(uint32_t startTime) {
 #ifdef DEBUG
     Serial.println("HR capture done");
 #endif
-		enableMAX30102(false);
+		enableMAX30101(false);
     return(false);
   }
 	  interruptFlags = MAX_readInterrupts();
@@ -42,14 +42,12 @@ boolean captureHR(uint32_t startTime) {
 			}
     	findBeat(LPfilterOutput);
     	if(checkQS()){
-				if(DEBUG){
-	      	printBeatData();
-				}
+				if(DEBUG){ printBPM(); }
 				arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
 		    beatCounter++;
     	}
       if(sampleCounter == 0x00){  // rolls over to 0 at 200
-//       MAX30102_writeRegister(TEMP_CONFIG,0x01); // take temperature
+//       MAX30101_writeRegister(TEMP_CONFIG,0x01); // take temperature
       }
 		}
    }
@@ -158,6 +156,10 @@ void printBeatData(){
   Serial.print("amp: "); Serial.print(amp); printTab();
 
   Serial.println();
+}
+
+void printBPM(){
+  Serial.print("BPM: "); Serial.println(BPM);
 }
 
 boolean checkQS(){

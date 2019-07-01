@@ -21,21 +21,21 @@
  */
 void MAX_init(byte sa, byte m, byte adcr, byte sr, byte pw, int a){
   byte setting;
-  // reset the MAX30102
+  // reset the MAX30101
   setting = RESET;
-  MAX30102_writeRegister(MODE_CONFIG,setting);
+  MAX30101_writeRegister(MODE_CONFIG,setting);
   delay(50);
   // set fifo configuration
   setting = (sa | ROLLOVER_EN | 0x0F) & 0xFF;
-  MAX30102_writeRegister(FIFO_CONFIG,setting);
-  // set mode configuration put device in shutdown to set registers
+  MAX30101_writeRegister(FIFO_CONFIG,setting);
+  // set MAX_mode configuration put device in shutdown to set registers
   // 0x82 = shutdown, Heart Rate mode
   // 0x83 = shutdown, Sp02 mode
   setting = (SHUTDOWN | m) & 0xFF;
-  MAX30102_writeRegister(MODE_CONFIG,setting);
+  MAX30101_writeRegister(MODE_CONFIG,setting);
   // set Sp02 configuration
   setting = (adcr | sr | pw) & 0xFF;
-  MAX30102_writeRegister(SPO2_CONFIG,setting);
+  MAX30101_writeRegister(SPO2_CONFIG,setting);
   // set LED pulse amplitude (current in mA)
   setLEDamplitude(a, a, a);
   // enable interrupts
@@ -43,23 +43,23 @@ void MAX_init(byte sa, byte m, byte adcr, byte sr, byte pw, int a){
   MAX_setInterrupts(interruptSettings);
 }
 
-void enableMAX30102(boolean activate){
-  byte setting = mode;
+void enableMAX30101(boolean activate){
+  byte setting = MAX_mode;
   zeroFIFOpointers();
   if(!activate){ setting |= 0x80; }
-  MAX30102_writeRegister(MODE_CONFIG,setting);
+  MAX30101_writeRegister(MODE_CONFIG,setting);
 }
 
 void zeroFIFOpointers(){
-  MAX30102_writeRegister(FIFO_WRITE,0x00);
-  MAX30102_writeRegister(OVF_COUNTER,0x00);
-  MAX30102_writeRegister(FIFO_READ,0x00);
+  MAX30101_writeRegister(FIFO_WRITE,0x00);
+  MAX30101_writeRegister(OVF_COUNTER,0x00);
+  MAX30101_writeRegister(FIFO_READ,0x00);
 }
 
 // report RevID and PartID for verification
 void getMAXdeviceInfo(){
-  byte revID = MAX30102_readRegister(REV_ID);
-  byte partID = MAX30102_readRegister(PART_ID);
+  byte revID = MAX30101_readRegister(REV_ID);
+  byte partID = MAX30101_readRegister(PART_ID);
   if(DEBUG){ Serial.print("MAX rev: 0x");
     Serial.println(revID,HEX);
     Serial.print("MAX part ID: 0x");
@@ -104,8 +104,8 @@ void serveInterrupts(uint16_t flags){
     if((flags & (PPG_RDY<<8)) > 0){ // PPG data ready
 //      Serial.println("PPG_RDY");
 //      readPointers();
-      readPPG();  // read the light sensor data that is available
-      serialPPG(); // send the RED and/or IR data
+      readPPG();   // read the light sensor data that is available
+      filterPPG(); // band pass filter the PPG signal
     }
     if((flags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
       if(DEBUG){ Serial.println("ALC_OVF"); }
@@ -123,8 +123,8 @@ void serveInterrupts(uint16_t flags){
 
 int readPointers(){
   int diff;
-  readPointer = MAX30102_readRegister(FIFO_READ);
-  writePointer = MAX30102_readRegister(FIFO_WRITE);
+  readPointer = MAX30101_readRegister(FIFO_READ);
+  writePointer = MAX30101_readRegister(FIFO_WRITE);
   if(writePointer > readPointer){
     diff = int(writePointer - readPointer);
   }else if(readPointer > writePointer){
@@ -143,8 +143,8 @@ int readPointers(){
 byte tempInteger;
 byte tempFraction;
 void readTemp(){
-  tempInteger = MAX30102_readRegister(TEMP_INT);
-  tempFraction = MAX30102_readRegister(TEMP_FRAC);
+  tempInteger = MAX30101_readRegister(TEMP_INT);
+  tempFraction = MAX30101_readRegister(TEMP_FRAC);
   Celcius = float(tempInteger);
   Celcius += (float(tempFraction)/16);
   Fahrenheit = Celcius*1.8 + 32;
@@ -169,33 +169,34 @@ void readPPG(){
 
 // send PPG value(s) via Serial port
 void serialPPG(){
-  int Red_IR = REDvalue + IRvalue;
   if (DEBUG) {
-//    Serial.println();  // formatting...
-    Serial.print(sampleCounter,DEC); printTab();
-    Serial.print(REDvalue); printTab();
-    Serial.print(IRvalue);
-  } else {
-    if(useFilter){
+//    Serial.print(sampleCounter,DEC); printTab();
+//    Serial.print(REDvalue); printTab();
+//    Serial.println(IRvalue);
+  } 
+}
+
+void filterPPG(){
+  int Red_IR = REDvalue + IRvalue;
+  if(useFilter){
 //      thatTestTime = micros();  // USE TO TIME FILTER MATH
-      HPfilterOutput = highPass.filterIn(Red_IR); // HighPass takes about 110uS
-      LPfilterOutput = lowPass.filterIn(HPfilterOutput);  // BandPass takes about 140uS
+    HPfilterOutput = highPass.filterIn(Red_IR); // HighPass takes about 110uS
+    LPfilterOutput = lowPass.filterIn(HPfilterOutput);  // BandPass takes about 140uS
 //      thisTestTime = micros(); Serial.print(thisTestTime - thatTestTime);
 //      Serial.println(LPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(HPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(Red_IR);
-    } else {
-      Serial.println(Red_IR);
+  } else {
+    if(DEBUG){ Serial.println(Red_IR); }
 //      printSpace();
 //      Serial.print(IRvalue);
-    }
   }
 }
 
 // read in the FIFO data three bytes per ADC result
 void readFIFOdata(){
   int bytesToGet;
-  switch(mode){
+  switch(MAX_mode){
     case HR_MODE:
       bytesToGet = 3; break;
     case SPO2_MODE:
@@ -203,7 +204,7 @@ void readFIFOdata(){
     case MULTI_MODE:
       bytesToGet = 9; break;
     default:
-      if(DEBUG){ Serial.println("mode not defined"); }
+      if(DEBUG){ Serial.println("MAX_mode not defined"); }
       return;
       break;
   }
@@ -271,16 +272,16 @@ void setLEDamplitude(int Ir, int Iir, int Ig){
   byte currentIR = Iir & 0xFF;
   byte currentG = Ig & 0xFF;
   // RED LED will always be on in all modes
-  MAX30102_writeRegister(RED_PA,currentR);
-  if(mode == SPO2_MODE){
-    MAX30102_writeRegister(IR_PA,currentIR);
+  MAX30101_writeRegister(RED_PA,currentR);
+  if(MAX_mode == SPO2_MODE){
+    MAX30101_writeRegister(IR_PA,currentIR);
   }else{
-    MAX30102_writeRegister(IR_PA,0x00);
+    MAX30101_writeRegister(IR_PA,0x00);
   }
-  if(mode == MULTI_MODE){
-    MAX30102_writeRegister(GRN_PA,currentG);
+  if(MAX_mode == MULTI_MODE){
+    MAX30101_writeRegister(GRN_PA,currentG);
   }else{
-    MAX30102_writeRegister(GRN_PA,0x00);
+    MAX30101_writeRegister(GRN_PA,0x00);
   }
 }
 
@@ -307,23 +308,23 @@ void MAX_setInterrupts(uint16_t setting){
 // reads the interrupt status registers
 // returns a 16 bit value
 uint16_t MAX_readInterrupts(){
-  byte inByte = MAX30102_readRegister(STATUS_1);
+  byte inByte = MAX30101_readRegister(STATUS_1);
   uint16_t inShort = inByte << 8;
-  inByte = MAX30102_readRegister(STATUS_2);
+  inByte = MAX30101_readRegister(STATUS_2);
   inShort |= inByte;
   return inShort;
 }
 
-// writes one register to the MAX30102
-void MAX30102_writeRegister(byte reg, byte setting){
+// writes one register to the MAX30101
+void MAX30101_writeRegister(byte reg, byte setting){
   Wire.beginTransmission(MAX_ADD);
   Wire.write(reg);
   Wire.write(setting);
   Wire.endTransmission(true);
 }
 
-// reads one register from the MAX30102
-byte MAX30102_readRegister(byte reg){
+// reads one register from the MAX30101
+byte MAX30101_readRegister(byte reg){
   byte inByte;
   Wire.beginTransmission(MAX_ADD);
   Wire.write(reg);
@@ -336,8 +337,8 @@ byte MAX30102_readRegister(byte reg){
  return inByte;
 }
 
-// reads two successive registers from the MAX30102
-short MAX30102_readShort(byte startReg){
+// reads two successive registers from the MAX30101
+short MAX30101_readShort(byte startReg){
   byte inByte[2];
   short shorty;
   int byteCounter = 0;

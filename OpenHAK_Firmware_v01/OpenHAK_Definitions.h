@@ -1,13 +1,13 @@
 
 /*
-  control bytes and register definitions for controling MAX30102
+  control bytes and register definitions for controling MAX30101
 */
 
 //  SIMBLEE PINS
 #define RED 24        // red part of LED
 #define GRN 23        // green part of LED
 #define BLU 20        // blue part of LED
-#define MAX_INT 30    // MAX30102 interrupts on this Simblee pin
+#define MAX_INT 30    // MAX30101 interrupts on this Simblee pin
 #define SCL_PIN 13    // I2C clock pin
 #define SDA_PIN 10    // I2C data pin
 #define BMI_INT1 29

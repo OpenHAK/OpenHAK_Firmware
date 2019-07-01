@@ -45,6 +45,8 @@ unsigned int thatTestTime;
 
 
 long lastTime;
+int sleepTimeNow;
+uint32_t startTime;
 long awakeTime;
 #ifndef DEBUG
 long interval = 15000; //30000 this is how long we capture hr data
@@ -68,7 +70,7 @@ int REDvalue;
 int IRvalue;
 int GRNvalue;
 byte sampleAve;
-byte mode;  
+byte MAX_mode;  
 byte sampleRange;
 byte sampleRate;
 byte pulseWidth;
@@ -79,14 +81,14 @@ byte ovfCounter;
 uint8_t arrayBeats[256];
 int beatCounter;
 unsigned long dummyTimer;
-bool tapFlag = false;
+//bool tapFlag = false;
 
 
-uint8_t phase = 10;
+uint8_t mode = 10;
 bool bConnected = false;
 
 // interval between advertisement transmissions ms (range is 20ms to 10.24s) - default 20ms
-int bleInterval = 300;  // 675 ms between advertisement transmissions longer time = better battery but slower scan/connect
+int bleInterval = 500;  // 675 ms between advertisement transmissions longer time = better battery but slower scan/connect
 
 /* DATA structures
    Sample data every 10 minutes
@@ -133,11 +135,11 @@ uint8_t advdata[14] =
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
 float LPfilterOutput = 0.0;
-const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
-const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
-const float sampling_time = 0.01; //Sampling time in seconds.
-Filter highPass(HPcutoff_freq, sampling_time, IIR::ORDER::OD2, IIR::TYPE::HIGHPASS);
-Filter lowPass(LPcutoff_freq, sampling_time,IIR::ORDER::OD1);
+//const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
+//const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
+//const float sampling_time = 0.01; //Sampling time in seconds.
+Filter highPass(0.8, 0.01, IIR::ORDER::OD2, IIR::TYPE::HIGHPASS);
+Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
 
 
 void setup()
@@ -157,8 +159,8 @@ void setup()
   SimbleeBLE.advertisementData = "OpenHAK";
   // Device Information Service strings
   SimbleeBLE.manufacturerName = "openhak";
-  SimbleeBLE.hardwareRevision = "0.3";
-  SimbleeBLE.softwareRevision = "0.0.4";
+  SimbleeBLE.hardwareRevision = "0.3.0";
+  SimbleeBLE.softwareRevision = "0.1.0";
   Wire.beginOnPins(SCL_PIN, SDA_PIN);
   // change the advertisement interval
   SimbleeBLE.advertisementInterval = bleInterval;
@@ -173,18 +175,19 @@ void setup()
 * Sample Average and Sample Rate are intimately entwined
 */
 	sampleAve = SMP_AVE_4;
-	mode = SPO2_MODE;
+	MAX_mode = SPO2_MODE;
 	sampleRange = ADC_RGE_8192;
 	sampleRate = SR_400;
 	pulseWidth = PW_411;
 	LEDcurrent = 30;
-	MAX_init(sampleAve, mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
+	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
 
   //Setup the BMI
   BMI160.begin(0, -1); // use BMI_INT1 for internal interrupt, but we're handling the interrupt so using -1
   BMI160.attachInterrupt(NULL); // use bmi160_intr for internal interrupt callback, but we're handling the interrupt so NULL
   //BMI160.setIntTapEnabled(true);
+  //  NEEDS TIGHTER SETTINGS ON THE DOUBLE TAP THRESHOLD
   BMI160.setIntDoubleTapEnabled(true);
   BMI160.setStepDetectionMode(BMI160_STEP_MODE_NORMAL);
   BMI160.setStepCountEnabled(true);
@@ -194,7 +197,7 @@ void setup()
 
 #ifdef DEBUG
   Serial.println("OpenHAK v0.1.0");
-  getBMI_chipID();    // print BMI id [0xD1]
+  Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);   
   getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
   Serial.println("getting battery...");
   getBatteryVoltage();
@@ -219,21 +222,10 @@ setTime(DEFAULT_TIME);
   lastTime = millis();
 }
 
-void bmi160_intr(void)
-{
-  tapFlag = true;
-  //Lazarus.ariseLazarus();
-  //byte int_status = BMI160.getIntStatus0();
-  // Serial.print("Steps ");
-  // Serial.print(BMI160.getStepCount());
-  // Serial.print(" Single ");
-  // Serial.print(bitRead(int_status,5));
-  // Serial.print(" Double ");
-  // Serial.print(bitRead(int_status,4));
-  // Serial.print(" REG ");
-  // Serial.print(int_status,BIN);
-  // Serial.println(" BMI160 interrupt: TAP! ");
-}
+//void bmi160_intr(void)  
+//{
+// NOT USING THE BMI DEFINED ITERRUPT VECTOR
+//}
 
 void loop()
 {
@@ -251,25 +243,15 @@ void loop()
     Serial.println("TAP has awakened!");
 #endif
     Simblee_resetPinWake(BMI_INT1);
-    delay(100);
-    digitalWrite(RED, HIGH);
+    analogWrite(RED,0);
+    delay(600);
+    analogWrite(RED, 255);
   }
-  // particleSensor.wakeUp();
-  // particleSensor.setup();
-  long lastTime;
-  int sleepTimeNow;
-  uint32_t startTime;
-  //SimbleeBLE.send(0);
-  //lastBeatAvg = 0;
-  //beatAvg = 0;
-  //digitalWrite(RED,LOW);
-  // if (timeStatus() != timeNotSet) {
-  //         String printString = digitalClockDisplay();
-  // }
-  switch (phase) {
-    case 0:
+
+  switch (mode) {
+    case 0: // PHASE 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef DEBUG
-      Serial.println("Enter phase 0");
+      Serial.println("Enter mode 0");
 #endif
       lastTime = millis();
       utc = now();  // This works to keep time incrementing that we send to the phone
@@ -283,7 +265,7 @@ void loop()
       Serial.println("Starting HR capture");
 #endif
 			resetPulseVariables();
-			enableMAX30102(true);
+			enableMAX30101(true);
       startTime = millis();
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
@@ -294,14 +276,14 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-      //                samples[currentSample].aux1 = analogRead(PIN_2);
-      //                samples[currentSample].aux2 = analogRead(PIN_3);
+      //                samples[currentSample].aux1 = analogRead(PIN_2); // ADD MAX TEMP DATA HIGH BYTE
+      //                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
       //                samples[currentSample].aux3 = analogRead(PIN_4);
 
       if (bConnected) {
         sendSamples(samples[currentSample]);
       }
-      if (currentSample < 511) {
+      if (currentSample < 512) {
         currentSample++;
       } else {
         //TODO: Check and see if this works!
@@ -322,56 +304,49 @@ void loop()
       sleepTimeNow = sleepTime - (interval / 1000);
       sleepNow(sleepTimeNow);
       break;
-    case 1:
+    case 1: // MODE 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef DEBUG
-      Serial.println("Enter phase 1");
+      Serial.println("Enter mode 1");
 #endif
+      resetPulseVariables();
+      enableMAX30101(true);
       startTime = millis();
-      captureHR(startTime);
+      while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
+        ;
+      }
       break;
-    case 2:
+    case 2: // MODE 2 SWITCHES PHASE TO 0 THEN GOES TO SLEEPY
 #ifdef DEBUG
-      Serial.println("Enter phase 2");
+      Serial.println("Enter mode 2");
 #endif
-      phase = 0;
+      mode = 0;
       sleepTimeNow = sleepTime - (interval / 1000);
       sleepNow(sleepTimeNow);
       break;
-    case 3:
+    case 3: // MODE 3 TRANSFERS SAMPLES
 #ifdef DEBUG
-      Serial.println("Enter phase 3");
+      Serial.println("Enter mode 3");
 #endif
       transferSamples();
       break;
-    case 10:
+    case 10:  // MODE 10 SLEEPS FOR 10 SECONDS. WAITING FOR CONNECTION
 #ifdef DEBUG
-      Serial.println("Enter phase 10");
+      Serial.println("Enter mode 10");
 #endif
-      //phase = 0;
-      digitalWrite(RED, LOW);
+      //mode = 0;
+//      digitalWrite(RED, LOW);
       sleepNow(10);
       break;
   }
-  //Serial.print("IR=");
-  //Serial.print(irValue);
-  //Serial.print(", BPM=");
-  //Serial.print(beatsPerMinute);
-  //Serial.print(", Avg BPM=");
-  //Serial.print(beatAvg);
-
-  //if (irValue < 50000)
-  // Serial.print(" No finger?");
-
-  //Serial.println();
 }
 
 
 
 void sleepNow(long timeNow) {
-  digitalWrite(RED, HIGH);
-  digitalWrite(GRN, HIGH);
-  digitalWrite(BLU, HIGH);
-	// SOME CODE HERE TO ENSURE THE MAX IS OFF
+  analogWrite(RED, 255);
+  analogWrite(GRN, 255);  // shut down LEDs
+  analogWrite(BLU, 255);
+  enableMAX30101(false);  // shut down MAX
   //int sleepTimeNow = timeNow - (interval/1000);
   Simblee_ULPDelay(SECONDS(timeNow));
 }

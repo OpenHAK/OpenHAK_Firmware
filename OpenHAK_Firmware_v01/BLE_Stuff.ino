@@ -2,19 +2,22 @@
 void SimbleeBLE_onConnect()
 {
   bConnected = true;
-  //digitalWrite(BLU, LOW);
-  //mode = 1;
-  //Lazarus.ariseLazarus(); // Tell Lazarus to arise.
-  //analogWrite(BLU,10);
+  analogWrite(BLU, 100);
+  mode = 0;
+  Lazarus.ariseLazarus(); // Tell Lazarus to arise.
+  if(DEBUG){ Serial.println("ble connected"); }
+  delay(100);
+  analogWrite(BLU,255);
 }
 
 void SimbleeBLE_onDisconnect()
 {
   bConnected = false;
-  //mode = 2;
-  //digitalWrite(BLU, HIGH);
-  //analogWrite(BLU,255);
-  //pinMode(BLU,INPUT);
+  mode = 2;
+  analogWrite(GRN,100);
+  if(DEBUG){ Serial.println("ble disconnected"); }
+  delay(100);
+  analogWrite(GRN,255);
 }
 
 
@@ -37,7 +40,7 @@ void SimbleeBLE_onReceive(char *data, int len) {
       localTime = localZone.toLocal(utc);
       setTime(utc);
 
-      mode = 2;
+      mode = 0;
     }
   }
 
@@ -53,7 +56,7 @@ void transferSamples() {
       sendSamples(samples[i]);
     }
   }
-  mode = 0;
+  mode = 2; // WHAT TO DO HERE? 
 }
 
 
