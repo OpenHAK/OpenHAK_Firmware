@@ -15,7 +15,7 @@
 */
 
 #define DEBUG 0
-#include "OpenHAK_Definitions.h"
+#include "OpenHAK.h"
 #include <Wire.h>
 #include <filters.h> //https://github.com/MartinBloedorn/libFilter
 #include <BMI160Gen.h>
