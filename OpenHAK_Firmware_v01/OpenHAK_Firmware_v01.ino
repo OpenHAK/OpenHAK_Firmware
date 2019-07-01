@@ -15,7 +15,7 @@
 */
 
 #define DEBUG 1
-#include "OpenHAK_Definitions.h"
+#include "OpenHAK.h"	// mostly defines
 #include <Wire.h>
 #include <filters.h>
 #include <BMI160Gen.h>
@@ -70,7 +70,7 @@ int REDvalue;
 int IRvalue;
 int GRNvalue;
 byte sampleAve;
-byte MAX_mode;  
+byte MAX_mode;
 byte sampleRange;
 byte sampleRate;
 byte pulseWidth;
@@ -109,7 +109,7 @@ typedef struct {
   uint8_t aux3;
 } Payload;
 
-Payload samples[512]; 
+Payload samples[512];
 
 uint16_t currentSample = 0;
 
@@ -197,7 +197,7 @@ void setup()
 
 #ifdef DEBUG
   Serial.println("OpenHAK v0.1.0");
-  Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);   
+  Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
   getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
   Serial.println("getting battery...");
   getBatteryVoltage();
@@ -222,7 +222,7 @@ setTime(DEFAULT_TIME);
   lastTime = millis();
 }
 
-//void bmi160_intr(void)  
+//void bmi160_intr(void)
 //{
 // NOT USING THE BMI DEFINED ITERRUPT VECTOR
 //}
