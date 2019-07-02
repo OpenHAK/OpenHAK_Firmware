@@ -14,23 +14,19 @@
 
 */
 
-#define DEBUG 0
 #include "OpenHAK.h"
-#include <Wire.h>
-#include <filters.h> //https://github.com/MartinBloedorn/libFilter
+#include <filters.h> 
 #include <BMI160Gen.h>
 #include "QuickStats.h"
-//#include <TimeLib.h>
-#include <Timezone.h>
 #include <Lazarus.h>
-Lazarus Lazarus;
-
+#include <Timezone.h>
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
+#include <Wire.h>
 
+
+Lazarus Lazarus;
 String VERSION = "0.1.0";
-
-
 
 time_t localTime, utc;
 int minutesOffset = 0;
@@ -49,10 +45,10 @@ int sleepTimeNow;
 uint32_t startTime;
 long awakeTime;
 #ifndef DEBUG
-long interval = 15000; //30000 this is how long we capture hr data
+long interval = 15000; //this is how long we capture hr data
 int sleepTime = 60; //600 is production
 #else
-long interval = 30000; //30000 this is how long we capture hr data
+long interval = 30000; //this is how long we capture hr data
 int sleepTime = 600; //600 is production
 #endif
 
