@@ -143,7 +143,13 @@ void setup()
   if(DEBUG){
     Serial.begin(9600);
     dummyTimer = millis();
+    delay(100);
     Serial.println("starting...");
+    Serial.println("OpenHAK v0.1.0");
+    Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
+    getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
+    Serial.println("getting battery...");
+    getBatteryVoltage();
   }
   String stringy =  String(getDeviceIdLow(), HEX);
   advdata[10] = (uint8_t)stringy.charAt(0);
@@ -178,26 +184,21 @@ void setup()
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
-
-  //Setup the BMI
+ 
+/*
+ *  Setup the BMI
+ */
   BMI160.begin(0, -1); // use BMI_INT1 for internal interrupt, but we're handling the interrupt so using -1
   BMI160.attachInterrupt(NULL); // use bmi160_intr for internal interrupt callback, but we're handling the interrupt so NULL
   //BMI160.setIntTapEnabled(true);
   //  NEEDS TIGHTER SETTINGS ON THE DOUBLE TAP THRESHOLD
-  BMI160.setIntDoubleTapEnabled(true);
+//  BMI160.setIntDoubleTapEnabled(true);
   BMI160.setStepDetectionMode(BMI160_STEP_MODE_NORMAL);
   BMI160.setStepCountEnabled(true);
   pinMode(BMI_INT1, INPUT); // set BMI interrupt pin
   Simblee_pinWake(BMI_INT1, LOW); // use this to wake the MCU if its sleeping
 
 
-#ifdef DEBUG
-  Serial.println("OpenHAK v0.1.0");
-  Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
-  getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
-  Serial.println("getting battery...");
-  getBatteryVoltage();
-#endif
 
 const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
 setTime(DEFAULT_TIME);
@@ -226,11 +227,12 @@ setTime(DEFAULT_TIME);
 void loop()
 {
   if (Lazarus.lazarusArising()) {
-    digitalWrite(BLU, LOW);
 #ifdef DEBUG
     Serial.println("Lazarus has awakened!");
 #endif
-    // Serial.println("");
+    analogWrite(GRN, 100);
+    delay(600);
+    analogWrite(GRN, 255);
   }
   if (Simblee_pinWoke(BMI_INT1))
   {
@@ -239,13 +241,13 @@ void loop()
     Serial.println("TAP has awakened!");
 #endif
     Simblee_resetPinWake(BMI_INT1);
-    analogWrite(RED,0);
+    analogWrite(RED,100);
     delay(600);
     analogWrite(RED, 255);
   }
 
   switch (mode) {
-    case 0: // PHASE 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
+    case 0: // MODE 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef DEBUG
       Serial.println("Enter mode 0");
 #endif
