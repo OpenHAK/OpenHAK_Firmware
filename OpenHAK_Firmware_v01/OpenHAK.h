@@ -3,7 +3,7 @@
   control bytes and register definitions for controling MAX30101
 */
 
-#define DEBUG 0
+//#define DEBUG 1
 
 //  SIMBLEE PINS
 #define RED 24        // red part of LED

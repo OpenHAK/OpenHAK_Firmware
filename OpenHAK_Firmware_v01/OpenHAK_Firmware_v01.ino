@@ -23,10 +23,13 @@
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
 #include <Wire.h>
-
+/*
+ *  For OTA bootloader bank size adjust go here
+ *  Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+ *  based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
+ */
 
 Lazarus Lazarus;
-String VERSION = "0.1.0";
 
 time_t localTime, utc;
 int minutesOffset = 0;
@@ -35,10 +38,11 @@ signed char timeZoneOffset = 0;
 QuickStats stats; //initialize an instance of stats class
 
 
-//  TESTING
-unsigned int thisTestTime;
-unsigned int thatTestTime;
-
+  //  TESTING
+#ifdef DEBUG
+  unsigned int thisTestTime;
+  unsigned int thatTestTime;
+#endif
 
 long lastTime;
 int sleepTimeNow;
@@ -65,19 +69,17 @@ byte sampleCounter = 0;
 int REDvalue;
 int IRvalue;
 int GRNvalue;
-byte sampleAve;
+//byte sampleAve;
 byte MAX_mode;
-byte sampleRange;
-byte sampleRate;
+//byte sampleRange;
+//byte sampleRate;
 byte pulseWidth;
-int LEDcurrent;
+//int LEDcurrent;
 byte readPointer;
 byte writePointer;
 byte ovfCounter;
-uint8_t arrayBeats[256];
+uint8_t arrayBeats[100];
 int beatCounter;
-unsigned long dummyTimer;
-//bool tapFlag = false;
 
 
 uint8_t mode = 10;
@@ -134,15 +136,14 @@ float LPfilterOutput = 0.0;
 //const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
 //const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
 //const float sampling_time = 0.01; //Sampling time in seconds.
-Filter highPass(0.8, 0.01, IIR::ORDER::OD2, IIR::TYPE::HIGHPASS);
+Filter highPass(0.8, 0.01, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
 Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
 
 
 void setup()
 {
-  if(DEBUG){
+#ifdef DEBUG
     Serial.begin(9600);
-    dummyTimer = millis();
     delay(100);
     Serial.println("starting...");
     Serial.println("OpenHAK v0.1.0");
@@ -150,7 +151,7 @@ void setup()
     getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
     Serial.println("getting battery...");
     getBatteryVoltage();
-  }
+#endif
   String stringy =  String(getDeviceIdLow(), HEX);
   advdata[10] = (uint8_t)stringy.charAt(0);
   advdata[11] = (uint8_t)stringy.charAt(1);
@@ -164,7 +165,7 @@ void setup()
   SimbleeBLE.hardwareRevision = "0.3.0";
   SimbleeBLE.softwareRevision = "0.1.0";
   Wire.beginOnPins(SCL_PIN, SDA_PIN);
-  // change the advertisement interval
+  // change the advertisement interval?
   SimbleeBLE.advertisementInterval = bleInterval;
   SimbleeBLE.begin();
   for(int i=0; i<3; i++){
@@ -176,13 +177,13 @@ void setup()
 * (Sample Average, Mode, ADC Range, Sample Rate, Pulse Width, LED Current)
 * Sample Average and Sample Rate are intimately entwined
 */
-	sampleAve = SMP_AVE_4;
+//	sampleAve = SMP_AVE_4;
 	MAX_mode = SPO2_MODE;
-	sampleRange = ADC_RGE_8192;
-	sampleRate = SR_400;
+//	sampleRange = ADC_RGE_8192;
+//	sampleRate = SR_400;
 	pulseWidth = PW_411;
-	LEDcurrent = 30;
-	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
+//	LEDcurrent = 30;
+	MAX_init(SMP_AVE_4, MAX_mode, ADC_RGE_8192, SR_400, pulseWidth, 30);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
  
 /*
@@ -313,7 +314,7 @@ void loop()
         ;
       }
       break;
-    case 2: // MODE 2 SWITCHES PHASE TO 0 THEN GOES TO SLEEPY
+    case 2: // MODE 2 SWITCHES MODE TO 0 THEN GOES TO SLEEPY
 #ifdef DEBUG
       Serial.println("Enter mode 2");
 #endif
@@ -382,17 +383,17 @@ uint8_t getBatteryVoltage() {
       lastCount = analogRead(V_SENSE);
       delay(10);
       thisCount = analogRead(V_SENSE);
-			if(DEBUG){
+#ifdef DEBUG
 	      Serial.print(i); Serial.print("\t"); Serial.print(lastCount); Serial.print("\t"); Serial.println(thisCount);
-			}
+#endif
       if(thisCount >= lastCount){ break; }
       delay(10);
     }
     volts = float(thisCount) * (3.0 / 1023.0);
     volts *= 2.0;
-    if(DEBUG){
+#ifdef DEBUG
       Serial.print(thisCount); Serial.print("\t"); Serial.println(volts,3);
-    }
+#endif
     returnVal = byte(volts/BATT_VOLT_CONST); // convert to byte for OTA data transfer
     return returnVal;
 }

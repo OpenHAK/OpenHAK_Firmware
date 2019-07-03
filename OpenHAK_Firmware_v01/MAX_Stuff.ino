@@ -60,11 +60,12 @@ void zeroFIFOpointers(){
 void getMAXdeviceInfo(){
   byte revID = MAX30101_readRegister(REV_ID);
   byte partID = MAX30101_readRegister(PART_ID);
-  if(DEBUG){ Serial.print("MAX rev: 0x");
-    Serial.println(revID,HEX);
-    Serial.print("MAX part ID: 0x");
-    Serial.println(partID,HEX); 
-  }
+#ifdef DEBUG
+  Serial.print("MAX rev: 0x");
+  Serial.println(revID,HEX);
+  Serial.print("MAX part ID: 0x");
+  Serial.println(partID,HEX); 
+#endif
 }
 
 // read interrupt flags and do the work to service them
@@ -72,7 +73,9 @@ void serviceInterrupts(){
     MAX_interrupt = false;  // reset this software flag
     interruptFlags = MAX_readInterrupts();  // read interrupt registers
     if((interruptFlags & (A_FULL<<8)) > 0){ // FIFO Almost Full
-      if(DEBUG){ Serial.println("A_FULL"); }
+#ifdef DEBUG
+  Serial.println("A_FULL");
+#endif
       // do something?
     }
     if((interruptFlags & (PPG_RDY<<8)) > 0){ // PPG data ready
@@ -82,23 +85,31 @@ void serviceInterrupts(){
       serialPPG(); // send the RED and/or IR data
     }
     if((interruptFlags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
-      if(DEBUG){ Serial.println("ALC_OVF"); }
+#ifdef DEBUG
+  Serial.println("ALC_OVF"); 
+#endif
       // do something?
     }
     if((interruptFlags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
       readTemp();
-      if(DEBUG){ printTemp(); }
+#ifdef DEBUG
+  printTemp();
+#endif
     }
     if((interruptFlags &(PWR_RDY<<8)) > 0){
-      if(DEBUG){ Serial.println("power up"); }
+#ifdef DEBUG
+  Serial.println("power up");
+#endif
     }
 }
 
 void serveInterrupts(uint16_t flags){
     MAX_interrupt = false;  // reset this software flag
     if((flags & (A_FULL<<8)) > 0){ // FIFO Almost Full
-      if(DEBUG){ Serial.println("A_FULL"); }
+#ifdef DEBUG
+  Serial.println("A_FULL");
+#endif
       // do something?
     }
     if((flags & (PPG_RDY<<8)) > 0){ // PPG data ready
@@ -108,16 +119,22 @@ void serveInterrupts(uint16_t flags){
       filterPPG(); // band pass filter the PPG signal
     }
     if((flags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
-      if(DEBUG){ Serial.println("ALC_OVF"); }
+#ifdef DEBUG
+  Serial.println("ALC_OVF");
+#endif
       // do something?
     }
     if((flags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
       readTemp();
-      if(DEBUG){ printTemp(); }
+#ifdef DEBUG
+  printTemp();
+#endif
     }
     if((flags &(PWR_RDY<<8)) > 0){
-      if(DEBUG){ Serial.println("power up"); }
+#ifdef DEBUG
+  Serial.println("power up");
+#endif
     }
 }
 
@@ -130,12 +147,12 @@ int readPointers(){
   }else if(readPointer > writePointer){
     diff = int((32 - readPointer) + writePointer);
   }
-  if(DEBUG){
+#ifdef DEBUG
     Serial.print("point"); printSpace();
     Serial.print(writePointer,DEC); printSpace();
     Serial.print(readPointer,DEC); printSpace();
     Serial.println(diff);
-  }
+#endif
   return diff;
 }
 
@@ -151,10 +168,10 @@ void readTemp(){
 }
 
 void printTemp(){
-  if (DEBUG) {
+#ifdef DEBUG
     printTab(); // formatting...
     Serial.print(Celcius,3); Serial.println("*C");
-  }
+#endif
 }
 
 
@@ -169,11 +186,11 @@ void readPPG(){
 
 // send PPG value(s) via Serial port
 void serialPPG(){
-  if (DEBUG) {
-//    Serial.print(sampleCounter,DEC); printTab();
-//    Serial.print(REDvalue); printTab();
-//    Serial.println(IRvalue);
-  } 
+#ifdef DEBUG
+    Serial.print(sampleCounter,DEC); printTab();
+    Serial.print(REDvalue); printTab();
+    Serial.println(IRvalue);
+#endif
 }
 
 void filterPPG(){
@@ -187,7 +204,9 @@ void filterPPG(){
 //      Serial.println(HPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(Red_IR);
   } else {
-    if(DEBUG){ Serial.println(Red_IR); }
+#ifdef DEBUG
+  Serial.println(Red_IR);
+#endif
 //      printSpace();
 //      Serial.print(IRvalue);
   }
@@ -204,7 +223,9 @@ void readFIFOdata(){
     case MULTI_MODE:
       bytesToGet = 9; break;
     default:
-      if(DEBUG){ Serial.println("MAX_mode not defined"); }
+#ifdef DEBUG
+  Serial.println("MAX_mode not defined");
+#endif
       return;
       break;
   }
@@ -287,9 +308,12 @@ void setLEDamplitude(int Ir, int Iir, int Ig){
 
 // measures time between samples for verificaion purposes
 void sampleTimeTest(){
+#ifdef DEBUG
   thisTestTime = micros();
-  if(DEBUG){ Serial.print("S\t"); Serial.println(thisTestTime - thatTestTime); }
+  Serial.print("S\t");
+  Serial.println(thisTestTime - thatTestTime);
   thatTestTime = thisTestTime;
+#endif
 }
 
 // set the desired interrupt flags
@@ -386,6 +410,7 @@ void printAllRegisters(){
 
 // helps to print out register values
 void readWireAndPrintHex(byte startReg){
+#ifdef DEBUG
   byte inByte;
   while(Wire.available()){
     inByte = Wire.read();
@@ -394,13 +419,14 @@ void readWireAndPrintHex(byte startReg){
     if(inByte < 0x10){ Serial.print("0"); }
     Serial.println(inByte,HEX);
   }
+#endif
 }
 
 
 
 // helps with verbose feedback
 void printRegName(byte regToPrint){
-
+#ifdef DEBUG
   switch(regToPrint){
     case STATUS_1:
       Serial.print("STATUS_1\t"); break;
@@ -449,6 +475,7 @@ void printRegName(byte regToPrint){
     default:
       Serial.print("RESERVED\t"); break;
   }
+#endif
 }
 
 // formatting...

@@ -5,7 +5,9 @@ void SimbleeBLE_onConnect()
   analogWrite(BLU, 100);
   mode = 0;
   Lazarus.ariseLazarus(); // Tell Lazarus to arise.
-  if(DEBUG){ Serial.println("ble connected"); }
+#ifdef DEBUG
+  Serial.println("ble connected"); 
+#endif
   delay(100);
   analogWrite(BLU,255);
 }
@@ -15,7 +17,9 @@ void SimbleeBLE_onDisconnect()
   bConnected = false;
   mode = 2;
   analogWrite(GRN,100);
-  if(DEBUG){ Serial.println("ble disconnected"); }
+#ifdef DEBUG
+  Serial.println("ble disconnected"); 
+#endif
   delay(100);
   analogWrite(GRN,255);
 }
@@ -24,7 +28,7 @@ void SimbleeBLE_onDisconnect()
 void SimbleeBLE_onReceive(char *data, int len) {
   // if the first byte is 0x01 / on / true
   //Serial.print("Received data over BLE ");
-  //Serial.println(len);
+  //Serial.print(len); Serial.println(" bytes");
   Lazarus.ariseLazarus();
   mode = data[0];
   if (mode == 10) {
