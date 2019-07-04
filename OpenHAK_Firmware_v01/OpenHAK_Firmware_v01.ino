@@ -54,11 +54,12 @@ int LEDpin[] = {RED,GRN,BLU};
 volatile boolean MAX_interrupt = false;
 short interruptSetting;
 short interruptFlags;
+boolean getTempFlag = false;
 byte tempInteger;
 byte tempFraction;
 float Celcius;
 float Fahrenheit;
-byte sampleCounter = 0;
+byte MAXsampleCounter = 0;
 int REDvalue;
 int IRvalue;
 int GRNvalue;
@@ -255,6 +256,7 @@ void loop()
       Serial.println("Starting HR capture");
 #endif
 			resetPulseVariables();
+      getTempFlag = true;
 			enableMAX30101(true);
       startTime = millis();
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?

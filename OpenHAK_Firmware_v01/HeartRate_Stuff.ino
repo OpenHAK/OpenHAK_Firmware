@@ -14,7 +14,7 @@
     boolean QS;             // The start of beat has been detected and not read by the Sketch.
     int FadeLevel;          // brightness of the FadePin, in scaled PWM units. See FADE_SCALE
     int amp;                         // used to hold amplitude of pulse waveform, seeded (sample value)
-    unsigned long lastBeatTime;      // used to find IBI. Time (sampleCounter) of the previous detected beat start.
+    unsigned long lastBeatTime;      // used to find IBI. Time (pulseSampleCounter) of the previous detected beat start.
     unsigned long pulseSampleCounter;     // used to determine pulse timing. Milliseconds since we started.
     int P;                           // used to find peak in pulse wave, seeded (sample value)
     int T;                           // used to find trough in pulse wave, seeded (sample value)
@@ -47,7 +47,8 @@ boolean captureHR(uint32_t startTime) {
 				arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
 		    beatCounter++;
     	}
-      if(sampleCounter == 0x00){  // rolls over to 0 at 200
+      if(getTempFlag){  // use temp data to determine if a body is attached?
+        getTempFlag = false;
         MAX30101_writeRegister(TEMP_CONFIG,0x01); // take temperature
       }
 		}

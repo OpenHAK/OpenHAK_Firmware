@@ -175,8 +175,8 @@ void printTemp(){
 
 void readPPG(){
 //  sampleTimeTest();
-  sampleCounter++;
-  if(sampleCounter > 200){ sampleCounter = 0; }
+  MAXsampleCounter++;
+  if(MAXsampleCounter > 200){ MAXsampleCounter = 0; }
   // use the FIFO read and write pointers?
   readFIFOdata();
 
@@ -185,7 +185,7 @@ void readPPG(){
 // send PPG value(s) via Serial port
 void serialPPG(){
 #ifdef SERIAL_LOG
-    Serial.print(sampleCounter,DEC); printTab();
+    Serial.print(MAXsampleCounter,DEC); printTab();
     Serial.print(REDvalue); printTab();
     Serial.println(IRvalue);
 #endif
