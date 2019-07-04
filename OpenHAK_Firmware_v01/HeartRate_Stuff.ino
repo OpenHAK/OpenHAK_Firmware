@@ -25,7 +25,7 @@
 
 
 boolean captureHR(uint32_t startTime) {
-  if (millis() - startTime > interval) {
+  if (millis() - startTime > HR_TIME) {
 #ifdef DEBUG
     Serial.println("HR capture done");
 #endif

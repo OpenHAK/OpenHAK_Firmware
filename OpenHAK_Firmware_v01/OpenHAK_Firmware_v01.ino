@@ -45,16 +45,13 @@ QuickStats stats; //initialize an instance of stats class
   unsigned int thatTestTime;
 #endif
 
-long lastTime;
-int sleepTimeNow;
 uint32_t startTime;
-long awakeTime;
 #ifndef DEBUG
-long interval = 15000; //this is how long we capture hr data
-int sleepTime = 60; //600 is production
+#define HR_TIME 15000  //this is how long we capture hr data in mS
+#define SLEEP_TIME  60000  //600,000 is production
 #else
-long interval = 30000; //this is how long we capture hr data
-int sleepTime = 600; //600 is production
+#define HR_TIME 30000  //this is how long we capture hr data in mS
+#define SLEEP_TIME  600000  //600,000 is production
 #endif
 
 float volts = 0.0;
@@ -70,12 +67,12 @@ byte sampleCounter = 0;
 int REDvalue;
 int IRvalue;
 int GRNvalue;
-//byte sampleAve;
+byte sampleAve;
 byte MAX_mode;
-//byte sampleRange;
-//byte sampleRate;
+byte sampleRange;
+byte sampleRate;
 byte pulseWidth;
-//int LEDcurrent;
+int LEDcurrent;
 byte readPointer;
 byte writePointer;
 byte ovfCounter;
@@ -178,13 +175,13 @@ void setup()
 * (Sample Average, Mode, ADC Range, Sample Rate, Pulse Width, LED Current)
 * Sample Average and Sample Rate are intimately entwined
 */
-//	sampleAve = SMP_AVE_4;
+	sampleAve = SMP_AVE_4;
 	MAX_mode = SPO2_MODE;
-//	sampleRange = ADC_RGE_8192;
-//	sampleRate = SR_400;
+	sampleRange = ADC_RGE_8192;
+	sampleRate = SR_400;
 	pulseWidth = PW_411;
-//	LEDcurrent = 30;
-	MAX_init(SMP_AVE_4, MAX_mode, ADC_RGE_8192, SR_400, pulseWidth, 30);
+	LEDcurrent = 30;
+	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
  
 /*
@@ -217,8 +214,6 @@ setTime(DEFAULT_TIME);
   delay(400);digitalWrite(BLU, HIGH);
 #endif
 
-
-  lastTime = millis();
 }
 
 //void bmi160_intr(void)
@@ -253,14 +248,11 @@ void loop()
 #ifdef DEBUG
       Serial.println("Enter mode 0");
 #endif
-      lastTime = millis();
       utc = now();  // This works to keep time incrementing that we send to the phone
       localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
       samples[currentSample].steps = BMI160.getStepCount();
       memset(arrayBeats, 0, sizeof(arrayBeats));
-//      resetPulseVariables();
-//      beat = lastBeat = beatCounter = 0;
 #ifdef DEBUG
       Serial.println("Starting HR capture");
 #endif
@@ -270,9 +262,7 @@ void loop()
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }
-
 //      BUILD THE REST OF THE BLE PACKET
-//      samples[currentSample].hr = stats.median(aveBeatsAve, aveCounter);
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
@@ -299,10 +289,7 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-
-      awakeTime = millis() - lastTime;
-      sleepTimeNow = sleepTime - (interval / 1000);
-      sleepNow(sleepTimeNow);
+      sleepNow();
       break;
     case 1: // MODE 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef DEBUG
@@ -320,8 +307,7 @@ void loop()
       Serial.println("Enter mode 2");
 #endif
       mode = 0;
-      sleepTimeNow = sleepTime - (interval / 1000);
-      sleepNow(sleepTimeNow);
+      sleepNow();
       break;
     case 3: // MODE 3 TRANSFERS SAMPLES
 #ifdef DEBUG
@@ -335,20 +321,20 @@ void loop()
 #endif
       //mode = 0;
 //      digitalWrite(RED, LOW);
-      sleepNow(10);
+      Simblee_ULPDelay(10000);
       break;
   }
 }
 
 
 
-void sleepNow(long timeNow) {
+void sleepNow() {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   enableMAX30101(false);  // shut down MAX
-  //int sleepTimeNow = timeNow - (interval/1000);
-  Simblee_ULPDelay(SECONDS(timeNow));
+  long sleepTimeNow = SLEEP_TIME - HR_TIME;
+  Simblee_ULPDelay(sleepTimeNow);
 }
 
 
