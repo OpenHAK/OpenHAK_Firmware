@@ -26,7 +26,7 @@
 
 boolean captureHR(uint32_t startTime) {
   if (millis() - startTime > HR_TIME) {
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     Serial.println("HR capture done");
 #endif
 		enableMAX30101(false);
@@ -41,7 +41,7 @@ boolean captureHR(uint32_t startTime) {
 			}
     	findBeat(LPfilterOutput);
     	if(checkQS()){
-				#ifdef DEBUG
+				#ifdef SERIAL_LOG
 				  printBPM();
         #endif
 				arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
@@ -146,7 +146,7 @@ void FadeHeartbeatLED(){
 }
 
 void printBeatData(){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.print("BPM: "); Serial.print(BPM); printTab();
   Serial.print("IBI: "); Serial.print(IBI); printTab();
   Serial.print("thresh: "); Serial.print(thresh); printTab();
@@ -156,7 +156,7 @@ void printBeatData(){
 }
 
 void printBPM(){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.print("BPM: "); Serial.println(BPM);
 #endif
 }

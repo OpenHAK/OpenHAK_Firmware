@@ -3,7 +3,7 @@
   control bytes and register definitions for controling MAX30101
 */
 
-//#define DEBUG 1
+//#define SERIAL_LOG 1
 
 //  SIMBLEE PINS
 #define RED 24        // red part of LED
@@ -40,7 +40,7 @@
 #define RED_PA 0x0C
 #define IR_PA 0x0D
 #define GRN_PA 0x0E
-#define LED4_PA  0x0F
+#define LED4_PA  0x0F 
 #define MODE_CNTRL_1  0x11
 #define MODE_CNTRL_2  0x12
 #define TEMP_INT  0x1F
@@ -92,3 +92,11 @@
 #define BLUE_ON 3
 #define ALL_ON 4
 #define BATT_VOLT_CONST 0.0165
+
+#ifndef SERIAL_LOG
+#define HR_TIME 15000  //this is how long we capture hr data in mS
+#define SLEEP_TIME  60000  //600,000 is production
+#else
+#define HR_TIME 30000  //this is how long we capture hr data in mS
+#define SLEEP_TIME  600000  //600,000 is production
+#endif

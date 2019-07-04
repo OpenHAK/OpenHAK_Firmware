@@ -60,7 +60,7 @@ void zeroFIFOpointers(){
 void getMAXdeviceInfo(){
   byte revID = MAX30101_readRegister(REV_ID);
   byte partID = MAX30101_readRegister(PART_ID);
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.print("MAX rev: 0x");
   Serial.println(revID,HEX);
   Serial.print("MAX part ID: 0x");
@@ -73,7 +73,7 @@ void serviceInterrupts(){
     MAX_interrupt = false;  // reset this software flag
     interruptFlags = MAX_readInterrupts();  // read interrupt registers
     if((interruptFlags & (A_FULL<<8)) > 0){ // FIFO Almost Full
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("A_FULL");
 #endif
       // do something?
@@ -85,7 +85,7 @@ void serviceInterrupts(){
       serialPPG(); // send the RED and/or IR data
     }
     if((interruptFlags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("ALC_OVF"); 
 #endif
       // do something?
@@ -93,12 +93,12 @@ void serviceInterrupts(){
     if((interruptFlags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
       readTemp();
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   printTemp();
 #endif
     }
     if((interruptFlags &(PWR_RDY<<8)) > 0){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("power up");
 #endif
     }
@@ -107,7 +107,7 @@ void serviceInterrupts(){
 void serveInterrupts(uint16_t flags){
     MAX_interrupt = false;  // reset this software flag
     if((flags & (A_FULL<<8)) > 0){ // FIFO Almost Full
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("A_FULL");
 #endif
       // do something?
@@ -119,7 +119,7 @@ void serveInterrupts(uint16_t flags){
       filterPPG(); // band pass filter the PPG signal
     }
     if((flags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("ALC_OVF");
 #endif
       // do something?
@@ -127,12 +127,12 @@ void serveInterrupts(uint16_t flags){
     if((flags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
       readTemp();
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   printTemp();
 #endif
     }
     if((flags &(PWR_RDY<<8)) > 0){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("power up");
 #endif
     }
@@ -147,7 +147,7 @@ int readPointers(){
   }else if(readPointer > writePointer){
     diff = int((32 - readPointer) + writePointer);
   }
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     Serial.print("point"); printSpace();
     Serial.print(writePointer,DEC); printSpace();
     Serial.print(readPointer,DEC); printSpace();
@@ -168,7 +168,7 @@ void readTemp(){
 }
 
 void printTemp(){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     printTab(); // formatting...
     Serial.print(Celcius,3); Serial.println("*C");
 #endif
@@ -186,7 +186,7 @@ void readPPG(){
 
 // send PPG value(s) via Serial port
 void serialPPG(){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     Serial.print(sampleCounter,DEC); printTab();
     Serial.print(REDvalue); printTab();
     Serial.println(IRvalue);
@@ -204,7 +204,7 @@ void filterPPG(){
 //      Serial.println(HPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(Red_IR);
   } else {
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println(Red_IR);
 #endif
 //      printSpace();
@@ -223,7 +223,7 @@ void readFIFOdata(){
     case MULTI_MODE:
       bytesToGet = 9; break;
     default:
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("MAX_mode not defined");
 #endif
       return;
@@ -308,7 +308,7 @@ void setLEDamplitude(int Ir, int Iir, int Ig){
 
 // measures time between samples for verificaion purposes
 void sampleTimeTest(){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   thisTestTime = micros();
   Serial.print("S\t");
   Serial.println(thisTestTime - thatTestTime);
@@ -410,7 +410,7 @@ void printAllRegisters(){
 
 // helps to print out register values
 void readWireAndPrintHex(byte startReg){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   byte inByte;
   while(Wire.available()){
     inByte = Wire.read();
@@ -426,7 +426,7 @@ void readWireAndPrintHex(byte startReg){
 
 // helps with verbose feedback
 void printRegName(byte regToPrint){
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   switch(regToPrint){
     case STATUS_1:
       Serial.print("STATUS_1\t"); break;

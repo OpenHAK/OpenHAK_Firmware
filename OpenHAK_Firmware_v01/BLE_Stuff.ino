@@ -3,9 +3,9 @@ void SimbleeBLE_onConnect()
 {
   bConnected = true;
   analogWrite(BLU, 100);
-  mode = 0;
-  Lazarus.ariseLazarus(); // Tell Lazarus to arise.
-#ifdef DEBUG
+  modeNum = 0;
+//  Lazarus.ariseLazarus(); // Tell Lazarus to arise.
+#ifdef SERIAL_LOG
   Serial.println("ble connected"); 
 #endif
   delay(100);
@@ -15,9 +15,9 @@ void SimbleeBLE_onConnect()
 void SimbleeBLE_onDisconnect()
 {
   bConnected = false;
-  mode = 2;
+  modeNum = 2;
   analogWrite(GRN,100);
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("ble disconnected"); 
 #endif
   delay(100);
@@ -29,9 +29,9 @@ void SimbleeBLE_onReceive(char *data, int len) {
   // if the first byte is 0x01 / on / true
   //Serial.print("Received data over BLE ");
   //Serial.print(len); Serial.println(" bytes");
-  Lazarus.ariseLazarus();
-  mode = data[0];
-  if (mode == 10) {
+//  Lazarus.ariseLazarus();
+  modeNum = data[0];
+  if (modeNum == 10) {
     if (len >= 5) {
       unsigned long myNum = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
       setTime(myNum);
@@ -44,7 +44,7 @@ void SimbleeBLE_onReceive(char *data, int len) {
       localTime = localZone.toLocal(utc);
       setTime(utc);
 
-      mode = 0;
+      modeNum = 0;
     }
   }
 
@@ -52,7 +52,7 @@ void SimbleeBLE_onReceive(char *data, int len) {
 
 
 void transferSamples() {
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   Serial.println("Starting History transfer");
 #endif
   for (int i = 0; i < currentSample; i++) {
@@ -60,7 +60,7 @@ void transferSamples() {
       sendSamples(samples[i]);
     }
   }
-  mode = 2; // WHAT TO DO HERE? 
+  modeNum = 2; // WHAT TO DO HERE? 
 }
 
 

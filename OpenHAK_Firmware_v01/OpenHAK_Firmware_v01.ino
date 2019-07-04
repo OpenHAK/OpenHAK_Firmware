@@ -18,7 +18,7 @@
 #include <filters.h> 
 #include <BMI160Gen.h>
 #include "QuickStats.h"
-#include <Lazarus.h>
+//#include <Lazarus.h>
 #include <Timezone.h>
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
@@ -30,7 +30,7 @@
  *  based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
  */
 
-Lazarus Lazarus;
+//Lazarus Lazarus;
 
 time_t localTime, utc;
 int minutesOffset = 0;
@@ -40,19 +40,12 @@ QuickStats stats; //initialize an instance of stats class
 
 
   //  TESTING
-#ifdef DEBUG
+#ifdef SERIAL_LOG
   unsigned int thisTestTime;
   unsigned int thatTestTime;
 #endif
 
 uint32_t startTime;
-#ifndef DEBUG
-#define HR_TIME 15000  //this is how long we capture hr data in mS
-#define SLEEP_TIME  60000  //600,000 is production
-#else
-#define HR_TIME 30000  //this is how long we capture hr data in mS
-#define SLEEP_TIME  600000  //600,000 is production
-#endif
 
 float volts = 0.0;
 
@@ -80,7 +73,7 @@ uint8_t arrayBeats[100];
 int beatCounter;
 
 
-uint8_t mode = 10;
+uint8_t modeNum = 10;
 bool bConnected = false;
 
 // interval between advertisement transmissions ms (range is 20ms to 10.24s) - default 20ms
@@ -140,7 +133,7 @@ Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
 
 void setup()
 {
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     Serial.begin(9600);
     delay(100);
     Serial.println("starting...");
@@ -207,7 +200,7 @@ setTime(DEFAULT_TIME);
   delay(400);digitalWrite(GRN, LOW);digitalWrite(RED, HIGH);
   delay(400);digitalWrite(GRN, HIGH);digitalWrite(BLU, LOW);
   delay(400);digitalWrite(BLU, HIGH);
-#ifdef DEBUG
+#ifdef SERIAL_LOG
 	delay(400);digitalWrite(BLU, LOW);
   delay(400);digitalWrite(BLU, HIGH);
   delay(400);digitalWrite(BLU, LOW);
@@ -223,18 +216,18 @@ setTime(DEFAULT_TIME);
 
 void loop()
 {
-  if (Lazarus.lazarusArising()) {
-#ifdef DEBUG
-    Serial.println("Lazarus has awakened!");
-#endif
-    analogWrite(GRN, 100);
-    delay(600);
-    analogWrite(GRN, 255);
-  }
+//  if (Lazarus.lazarusArising()) {
+//#ifdef SERIAL_LOG
+//    Serial.println("Lazarus has awakened!");
+//#endif
+//    analogWrite(GRN, 100);
+//    delay(600);
+//    analogWrite(GRN, 255);
+//  }
   if (Simblee_pinWoke(BMI_INT1))
   {
     byte int_status = BMI160.getIntStatus0();
-#ifdef DEBUG
+#ifdef SERIAL_LOG
     Serial.println("TAP has awakened!");
 #endif
     Simblee_resetPinWake(BMI_INT1);
@@ -243,17 +236,17 @@ void loop()
     analogWrite(RED, 255);
   }
 
-  switch (mode) {
-    case 0: // MODE 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
-#ifdef DEBUG
-      Serial.println("Enter mode 0");
+  switch (modeNum) {
+    case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
+#ifdef SERIAL_LOG
+      Serial.println("Enter modeNum 0");
 #endif
       utc = now();  // This works to keep time incrementing that we send to the phone
       localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
       samples[currentSample].steps = BMI160.getStepCount();
       memset(arrayBeats, 0, sizeof(arrayBeats));
-#ifdef DEBUG
+#ifdef SERIAL_LOG
       Serial.println("Starting HR capture");
 #endif
 			resetPulseVariables();
@@ -266,9 +259,9 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-      //                samples[currentSample].aux1 = analogRead(PIN_2); // ADD MAX TEMP DATA HIGH BYTE
-      //                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
-      //                samples[currentSample].aux3 = analogRead(PIN_4);
+//                samples[currentSample].aux1 = analogRead(PIN_2); // ADD MAX TEMP DATA HIGH BYTE
+//                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
+//                samples[currentSample].aux3 = analogRead(PIN_4);
 
       if (bConnected) {
         sendSamples(samples[currentSample]);
@@ -285,15 +278,15 @@ void loop()
         //   memcpy(&samples[1], &samples[0], (512-1)*sizeof(*samples));
         // }
       }
-#ifdef DEBUG
+#ifdef SERIAL_LOG
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
       sleepNow();
       break;
-    case 1: // MODE 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
-#ifdef DEBUG
-      Serial.println("Enter mode 1");
+    case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
+#ifdef SERIAL_LOG
+      Serial.println("Enter modeNum 1");
 #endif
       resetPulseVariables();
       enableMAX30101(true);
@@ -302,24 +295,24 @@ void loop()
         ;
       }
       break;
-    case 2: // MODE 2 SWITCHES MODE TO 0 THEN GOES TO SLEEPY
-#ifdef DEBUG
-      Serial.println("Enter mode 2");
+    case 2: // modeNum 2 SWITCHES modeNum TO 0 THEN GOES TO SLEEPY
+#ifdef SERIAL_LOG
+      Serial.println("Enter modeNum 2");
 #endif
-      mode = 0;
+      modeNum = 0;
       sleepNow();
       break;
-    case 3: // MODE 3 TRANSFERS SAMPLES
-#ifdef DEBUG
-      Serial.println("Enter mode 3");
+    case 3: // modeNum 3 TRANSFERS SAMPLES
+#ifdef SERIAL_LOG
+      Serial.println("Enter modeNum 3");
 #endif
       transferSamples();
       break;
-    case 10:  // MODE 10 SLEEPS FOR 10 SECONDS. WAITING FOR CONNECTION
-#ifdef DEBUG
-      Serial.println("Enter mode 10");
+    case 10:  // modeNum 10 SLEEPS FOR 10 SECONDS. WAITING FOR CONNECTION
+#ifdef SERIAL_LOG
+      Serial.println("Enter modeNum 10");
 #endif
-      //mode = 0;
+      //modeNum = 0;
 //      digitalWrite(RED, LOW);
       Simblee_ULPDelay(10000);
       break;
@@ -370,7 +363,7 @@ uint8_t getBatteryVoltage() {
       lastCount = analogRead(V_SENSE);
       delay(10);
       thisCount = analogRead(V_SENSE);
-#ifdef DEBUG
+#ifdef SERIAL_LOG
 	      Serial.print(i); Serial.print("\t"); Serial.print(lastCount); Serial.print("\t"); Serial.println(thisCount);
 #endif
       if(thisCount >= lastCount){ break; }
@@ -378,7 +371,7 @@ uint8_t getBatteryVoltage() {
     }
     volts = float(thisCount) * (3.0 / 1023.0);
     volts *= 2.0;
-#ifdef DEBUG
+#ifdef SERIAL_LOG
       Serial.print(thisCount); Serial.print("\t"); Serial.println(volts,3);
 #endif
     returnVal = byte(volts/BATT_VOLT_CONST); // convert to byte for OTA data transfer
