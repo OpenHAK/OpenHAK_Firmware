@@ -35,20 +35,20 @@ boolean captureHR(uint32_t startTime) {
 	  interruptFlags = MAX_readInterrupts();
     if(interruptFlags > 0){
     serveInterrupts(interruptFlags); // go see what woke us up, and do the work
-		if((interruptFlags & PPG_RDY << 8) > 0){
+		if((interruptFlags & PPG_RDY << 8) > 0){  // If we get new PPG data go find the beat
 			while (SimbleeBLE.radioActive) {
 				;
 			}
     	findBeat(LPfilterOutput);
     	if(checkQS()){
-				#ifdef SERIAL_LOG
-				  printBPM();
-        #endif
+#ifdef SERIAL_LOG
+  printBPM();
+#endif
 				arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
 		    beatCounter++;
     	}
       if(sampleCounter == 0x00){  // rolls over to 0 at 200
-//       MAX30101_writeRegister(TEMP_CONFIG,0x01); // take temperature
+        MAX30101_writeRegister(TEMP_CONFIG,0x01); // take temperature
       }
 		}
    }

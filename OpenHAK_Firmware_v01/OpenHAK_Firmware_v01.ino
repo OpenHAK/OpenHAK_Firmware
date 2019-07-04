@@ -18,7 +18,7 @@
 #include <filters.h> 
 #include <BMI160Gen.h>
 #include "QuickStats.h"
-//#include <Lazarus.h>
+#include <Lazarus.h>
 #include <Timezone.h>
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
@@ -30,7 +30,7 @@
  *  based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
  */
 
-//Lazarus Lazarus;
+Lazarus Lazarus;
 
 time_t localTime, utc;
 int minutesOffset = 0;
@@ -41,8 +41,8 @@ QuickStats stats; //initialize an instance of stats class
 
   //  TESTING
 #ifdef SERIAL_LOG
-  unsigned int thisTestTime;
-  unsigned int thatTestTime;
+  unsigned long thisTestTime;
+  unsigned long thatTestTime;
 #endif
 
 uint32_t startTime;
@@ -54,6 +54,8 @@ int LEDpin[] = {RED,GRN,BLU};
 volatile boolean MAX_interrupt = false;
 short interruptSetting;
 short interruptFlags;
+byte tempInteger;
+byte tempFraction;
 float Celcius;
 float Fahrenheit;
 byte sampleCounter = 0;
@@ -216,14 +218,14 @@ setTime(DEFAULT_TIME);
 
 void loop()
 {
-//  if (Lazarus.lazarusArising()) {
-//#ifdef SERIAL_LOG
-//    Serial.println("Lazarus has awakened!");
-//#endif
-//    analogWrite(GRN, 100);
-//    delay(600);
-//    analogWrite(GRN, 255);
-//  }
+  if (Lazarus.lazarusArising()) {
+#ifdef SERIAL_LOG
+    Serial.println("Lazarus has awakened!");
+#endif
+    analogWrite(GRN, 100);
+    delay(600);
+    analogWrite(GRN, 255);
+  }
   if (Simblee_pinWoke(BMI_INT1))
   {
     byte int_status = BMI160.getIntStatus0();
@@ -239,7 +241,10 @@ void loop()
   switch (modeNum) {
     case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef SERIAL_LOG
+      thisTestTime = millis();
       Serial.println("Enter modeNum 0");
+      Serial.print("Time since last here "); Serial.println(thisTestTime - thatTestTime);
+      thatTestTime = thisTestTime;
 #endif
       utc = now();  // This works to keep time incrementing that we send to the phone
       localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
@@ -259,7 +264,7 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-//                samples[currentSample].aux1 = analogRead(PIN_2); // ADD MAX TEMP DATA HIGH BYTE
+      samples[currentSample].aux1 = tempInteger; // ADD MAX TEMP DATA HIGH BYTE
 //                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
 //                samples[currentSample].aux3 = analogRead(PIN_4);
 

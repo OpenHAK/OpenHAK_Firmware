@@ -3,8 +3,7 @@ void SimbleeBLE_onConnect()
 {
   bConnected = true;
   analogWrite(BLU, 100);
-  modeNum = 0;
-//  Lazarus.ariseLazarus(); // Tell Lazarus to arise.
+  Lazarus.ariseLazarus(); // Tell Lazarus to arise.
 #ifdef SERIAL_LOG
   Serial.println("ble connected"); 
 #endif
@@ -26,30 +25,38 @@ void SimbleeBLE_onDisconnect()
 
 
 void SimbleeBLE_onReceive(char *data, int len) {
-  // if the first byte is 0x01 / on / true
-  //Serial.print("Received data over BLE ");
-  //Serial.print(len); Serial.println(" bytes");
-//  Lazarus.ariseLazarus();
+  Lazarus.ariseLazarus();
+#ifdef SERIAL_LOG
+  Serial.print("Received data over BLE ");
+  Serial.print(len); Serial.println(" bytes");
+#endif
+  // the first byte says what mode to be in
   modeNum = data[0];
-  if (modeNum == 10) {
-    if (len >= 5) {
-      unsigned long myNum = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
-      setTime(myNum);
-      timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
-      minutesOffset = timeZoneOffset;
-      minutesOffset *= 10;
-      TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};
-      Timezone localZone(localCR, localCR);
-      utc = now();    //current time from the Time Library
-      localTime = localZone.toLocal(utc);
-      setTime(utc);
-
-      modeNum = 0;
+  switch (modeNum){
+    case 10:
+      if (len >= 5) {
+        unsigned long thyme = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
+        setTime(thyme);
+        timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
+        minutesOffset = timeZoneOffset;
+        minutesOffset *= 10;
+        TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};
+        Timezone localZone(localCR, localCR);
+        utc = now();    //current time from the Time Library
+        localTime = localZone.toLocal(utc);
+        setTime(utc);
+//        modeNum = 0;
+      }
+      break;
+    case 3:
+      if(currentSample < 1){ // if we are just starting out
+        modeNum = 0;
+      }
+      break;
+    default:
+      break;
     }
-  }
-
 }
-
 
 void transferSamples() {
 #ifdef SERIAL_LOG
@@ -79,6 +86,6 @@ void sendSamples(Payload sample) {
   data[10] = sample.aux2;
   data[11] = sample.aux3;
   // send is queued (the ble stack delays send to the start of the next tx window)
-  while (!SimbleeBLE.send(data, 9))
+  while (!SimbleeBLE.send(data, 12))
     ; // all tx buffers in use (can't send - try again later)
 }

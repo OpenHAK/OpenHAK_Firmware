@@ -92,7 +92,7 @@ void serviceInterrupts(){
     }
     if((interruptFlags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
-      readTemp();
+      getTemp();
 #ifdef SERIAL_LOG
   printTemp();
 #endif
@@ -126,7 +126,7 @@ void serveInterrupts(uint16_t flags){
     }
     if((flags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
 //      Serial.println("TEMP_RDY");
-      readTemp();
+      getTemp();
 #ifdef SERIAL_LOG
   printTemp();
 #endif
@@ -157,9 +157,7 @@ int readPointers(){
 }
 
 //  read die temperature to compansate for RED LED
-byte tempInteger;
-byte tempFraction;
-void readTemp(){
+void getTemp(){
   tempInteger = MAX30101_readRegister(TEMP_INT);
   tempFraction = MAX30101_readRegister(TEMP_FRAC);
   Celcius = float(tempInteger);
@@ -195,7 +193,7 @@ void serialPPG(){
 
 void filterPPG(){
   int Red_IR = REDvalue + IRvalue;
-  if(useFilter){
+//  if(useFilter){
 //      thatTestTime = micros();  // USE TO TIME FILTER MATH
     HPfilterOutput = highPass.filterIn(Red_IR); // HighPass takes about 110uS
     LPfilterOutput = lowPass.filterIn(HPfilterOutput);  // BandPass takes about 140uS
@@ -203,13 +201,13 @@ void filterPPG(){
 //      Serial.println(LPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(HPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(Red_IR);
-  } else {
-#ifdef SERIAL_LOG
-  Serial.println(Red_IR);
-#endif
+//  } else {
+//#ifdef SERIAL_LOG
+//  Serial.println(Red_IR);
+//#endif
 //      printSpace();
 //      Serial.print(IRvalue);
-  }
+//  }
 }
 
 // read in the FIFO data three bytes per ADC result
