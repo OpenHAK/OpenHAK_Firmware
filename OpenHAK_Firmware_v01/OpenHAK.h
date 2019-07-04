@@ -93,10 +93,10 @@
 #define ALL_ON 4
 #define BATT_VOLT_CONST 0.0165
 
-#ifndef SERIAL_LOG
-#define HR_TIME 15000  //this is how long we capture hr data in mS
-#define SLEEP_TIME  60000  //600,000 is production
-#else
+//#ifndef SERIAL_LOG
+//#define HR_TIME 15000  //this is how long we capture hr data in mS
+//#define SLEEP_TIME  60000  //600,000 is production
+//#else
 #define HR_TIME 30000  //this is how long we capture hr data in mS
 #define SLEEP_TIME  600000  //600,000 is production
-#endif
+//#endif

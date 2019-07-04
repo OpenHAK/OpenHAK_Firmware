@@ -327,7 +327,7 @@ void sleepNow() {
   analogWrite(BLU, 255);
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(sleepTimeNow);
+  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
 }
 
 
