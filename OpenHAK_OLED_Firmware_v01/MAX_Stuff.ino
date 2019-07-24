@@ -13,7 +13,7 @@
    * PW_69, PW_118, PW_215, PW_411
  * LED Current
    * 0 - 50mA
- * 
+ *
  *  Sample Average effects Sample Rate
    *  sa of 4 and sr of 400 = actual sample rate of 100
  *  Pulse Width effects resolution
@@ -64,7 +64,7 @@ void getMAXdeviceInfo(){
   Serial.print("MAX rev: 0x");
   Serial.println(revID,HEX);
   Serial.print("MAX part ID: 0x");
-  Serial.println(partID,HEX); 
+  Serial.println(partID,HEX);
 #endif
 }
 
@@ -86,7 +86,7 @@ void serviceInterrupts(){
     }
     if((interruptFlags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
 #ifdef SERIAL_LOG
-  Serial.println("ALC_OVF"); 
+  Serial.println("ALC_OVF");
 #endif
       // do something?
     }
@@ -237,8 +237,7 @@ void readFIFOdata(){
     dataByte[byteCounter] = Wire.read();
     byteCounter++;
   }
-  Wire.endTransmission(true);
-  REDvalue = 0L; 
+  REDvalue = 0L;
   REDvalue = (dataByte[0] & 0xFF); REDvalue <<= 8;
   REDvalue |= dataByte[1]; REDvalue <<= 8;
   REDvalue |= dataByte[2];
@@ -355,7 +354,6 @@ byte MAX30101_readRegister(byte reg){
   while(Wire.available()){
     inByte = Wire.read();
   }
-  Wire.endTransmission(true);
  return inByte;
 }
 
@@ -372,7 +370,6 @@ short MAX30101_readShort(byte startReg){
     inByte[byteCounter] = Wire.read();
     byteCounter++;
   }
-  Wire.endTransmission(true);
   shorty = (inByte[0]<<8) | inByte[1];
  return shorty;
 }
@@ -384,19 +381,16 @@ void printAllRegisters(){
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,7);
   readWireAndPrintHex(STATUS_1);
-  Wire.endTransmission(true);
   Wire.beginTransmission(MAX_ADD);
   Wire.write(FIFO_CONFIG);
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,11);
   readWireAndPrintHex(FIFO_CONFIG);
-  Wire.endTransmission(true);
   Wire.beginTransmission(MAX_ADD);
   Wire.write(TEMP_INT);
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,3);
   readWireAndPrintHex(TEMP_INT);
-  Wire.endTransmission(true);
 
   Wire.beginTransmission(MAX_ADD);
   Wire.write(REV_ID);
@@ -413,7 +407,7 @@ void readWireAndPrintHex(byte startReg){
   while(Wire.available()){
     inByte = Wire.read();
     printRegName(startReg); startReg++;
-    Serial.print("0x"); 
+    Serial.print("0x");
     if(inByte < 0x10){ Serial.print("0"); }
     Serial.println(inByte,HEX);
   }
