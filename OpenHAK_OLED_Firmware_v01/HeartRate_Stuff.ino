@@ -124,7 +124,7 @@ void findBeat(float Signal){  // this takes 120uS max
 
       BPM = 60000 / IBI; //runningTotal;             // how many beats can fit into a minute? that's BPM!
       QS = true;                              // set Quantified Self flag (we detected a beat)
-      FadeLevel = 0;                          // re-light that LED.
+      FadeLevel = 100;                          // re-light that LED.
     }
   }
 
