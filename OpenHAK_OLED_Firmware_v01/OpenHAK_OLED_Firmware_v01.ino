@@ -337,8 +337,8 @@ void loop()
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 10");
 #endif
-      printOLED("Sync me :)",false);  // add the advertised hex identifier
-      delay(1000);
+//      printOLED("Sync me :)",false);  // add the advertised hex identifier
+      splashDEFCON();
       Simblee_ULPDelay(10000);
       break;
   }

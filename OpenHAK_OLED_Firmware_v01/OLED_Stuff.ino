@@ -19,7 +19,23 @@ void splashOLED(){
     oled.display();
 }
 
+void splashDEFCON(){
+    oled.begin();    // Initialize the OLED
+    oled.flipHorizontal(true);
+    oled.flipVertical(true);
+    oled.clear(ALL); // Clear the display's internal memory
+    oled.clear(PAGE); // Clear the buffer.
 
+    oled.setFontType(FONT_8x16);
+    oled.setCursor(0, 0);
+    oled.println("OpenHAK");
+    oled.setFontType(FONT_5x7);
+    oled.setCursor(0, 17);
+    oled.println("BioHacking  Village");
+    oled.setCursor(0, 37);
+    oled.println(" DEFCON 27"); 
+    oled.display();
+}
 
 void printOLED(String inString, boolean printTime) {
 
