@@ -159,9 +159,7 @@ void setup()
   splashOLED();
 
   ble_address =  String(getDeviceIdLow(), HEX);
-	for(int i=0; i<3; i++){
-		if(ble_address.charAt(i) > 90){ ble_address.charAt(i) -= 32; }
-	}
+  ble_address.toUpperCase();
   advdata[10] = (uint8_t)ble_address.charAt(0);
   advdata[11] = (uint8_t)ble_address.charAt(1);
   advdata[12] = (uint8_t)ble_address.charAt(2);
@@ -344,13 +342,14 @@ void loop()
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 10");
 #endif
+      splashDEFCON();
+      delay(4000);
 			String sync = String("Sync me :)       ");
 			sync.setCharAt(13,ble_address.charAt(0));
 			sync.setCharAt(14,ble_address.charAt(1));
 			sync.setCharAt(15,ble_address.charAt(2));
 			sync.setCharAt(16,ble_address.charAt(3));
       printOLED(sync,false);  // add the advertised hex identifier
-      delay(1000);
       Simblee_ULPDelay(10000);
       break;
   }
