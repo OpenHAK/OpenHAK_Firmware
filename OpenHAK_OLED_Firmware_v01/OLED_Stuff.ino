@@ -17,10 +17,12 @@ void splashOLED(){
     oled.println("murphy"); // murphifield
     oled.println("percifield");
     oled.display();
+    delay(500);
 }
 
 void splashDEFCON(){
     oled.begin();    // Initialize the OLED
+    oled.invert(true);
     oled.flipHorizontal(true);
     oled.flipVertical(true);
     oled.clear(ALL); // Clear the display's internal memory

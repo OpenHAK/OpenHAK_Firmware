@@ -311,7 +311,7 @@ void loop()
         ;
       }
       break;
-    case 2: // modeNum 2 SWITCHES modeNum TO 0 THEN GOES TO SLEEPY
+    case 2: // modeNum 2 SWITCHES modeNum TO 0 
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 2");
 #endif
