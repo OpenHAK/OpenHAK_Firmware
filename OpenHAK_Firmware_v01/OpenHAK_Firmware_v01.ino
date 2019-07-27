@@ -78,10 +78,8 @@ int beatCounter;
 long lastTime;
 long awakeTime;
 #ifndef SERIAL_LOG
-long interval = 30000; //30000 this is how long we capture hr data
 int sleepTime = 600; //600 is production
 #else
-long interval = 30000; //30000 this is how long we capture hr data
 int sleepTime = 60; //600 is production
 #endif
 
@@ -307,7 +305,7 @@ void loop()
       Serial.println(currentSample);
 #endif
       awakeTime = millis() - lastTime;
-      sleepTimeNow = sleepTime - (interval / 1000);
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
       sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
@@ -326,7 +324,7 @@ void loop()
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepTimeNow = sleepTime - (interval / 1000);
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
       sleepNow(sleepTimeNow);
       break;
     case 3: // modeNum 3 TRANSFERS SAMPLES
