@@ -38,7 +38,6 @@ signed char timeZoneOffset = 0;
 
 QuickStats stats; //initialize an instance of stats class
 
-
   //  TESTING
 #ifdef SERIAL_LOG
   unsigned long thisTestTime;
@@ -74,6 +73,19 @@ byte writePointer;
 byte ovfCounter;
 uint8_t arrayBeats[100];
 int beatCounter;
+
+////LEIFS ADD????
+long lastTime;
+long awakeTime;
+#ifndef SERIAL_LOG
+long interval = 30000; //30000 this is how long we capture hr data
+int sleepTime = 600; //600 is production
+#else
+long interval = 30000; //30000 this is how long we capture hr data
+int sleepTime = 60; //600 is production
+#endif
+
+/////
 
 
 uint8_t modeNum = 10;
@@ -238,7 +250,11 @@ void loop()
     delay(600);
     analogWrite(RED, 255);
   }
-
+  
+  long lastTime; // the 
+  int sleepTimeNow;
+  uint32_t startTime;
+  
   switch (modeNum) {
     case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef SERIAL_LOG
@@ -247,6 +263,7 @@ void loop()
       Serial.print("Time since last here "); Serial.println(thisTestTime - thatTestTime);
       thatTestTime = thisTestTime;
 #endif
+      lastTime = millis();
       utc = now();  // This works to keep time incrementing that we send to the phone
       localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
@@ -289,7 +306,9 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-      sleepNow();
+      awakeTime = millis() - lastTime;
+      sleepTimeNow = sleepTime - (interval / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef SERIAL_LOG
@@ -307,7 +326,8 @@ void loop()
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepNow();
+      sleepTimeNow = sleepTime - (interval / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 3: // modeNum 3 TRANSFERS SAMPLES
 #ifdef SERIAL_LOG
@@ -320,21 +340,23 @@ void loop()
       Serial.println("Enter modeNum 10");
 #endif
       //modeNum = 0;
-//      digitalWrite(RED, LOW);
-      Simblee_ULPDelay(10000);
+      digitalWrite(RED, LOW);
+      delay(10);
+      sleepNow(10);
+      //Simblee_ULPDelay(10000);
       break;
   }
 }
 
 
 
-void sleepNow() {
+void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
+  Simblee_ULPDelay(SECONDS(timeNow));
 }
 
 
