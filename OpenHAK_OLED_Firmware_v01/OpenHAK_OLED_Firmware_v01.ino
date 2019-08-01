@@ -20,6 +20,7 @@ WYSIWYG. NO GUARANTEES OR WARANTEES.
 
 
 */
+
 // SELECT YOUR VERSION
 // #define BETA_TESTER 1	// use this for the 2019 beta hardware
 #define BIO_VILLAGE_BADGE 1	// use this for the BioHacking Village Badge for DEFCON 27
@@ -53,7 +54,6 @@ String VERSION = "1.0.0";
   unsigned long thatTestTime;
 #endif
 
-uint32_t startTime;
 
 float volts = 0.0;
 
@@ -63,7 +63,8 @@ volatile boolean MAX_interrupt = false;
 short interruptSetting;
 short interruptFlags;
 boolean getTempFlag = false;
-byte tempInteger;
+byte tempIntC;
+byte tempIntF;
 byte tempFraction;
 float Celcius;
 float Fahrenheit;
@@ -148,11 +149,11 @@ String ble_address;
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
 float LPfilterOutput = 0.0;
-//const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
-//const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
-//const float sampling_time = 0.01; //Sampling time in seconds.
-Filter highPass(0.8, 0.01, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
-Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
+const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
+const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
+const float sampling_time = 0.01; //Sampling time in seconds.
+Filter highPass(HPcutoff_freq, sampling_time, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
+Filter lowPass(LPcutoff_freq, sampling_time,IIR::ORDER::OD1);
 
 
 void setup()
@@ -161,7 +162,7 @@ void setup()
     Serial.begin(9600);
     delay(100);
     Serial.println("starting...");
-    Serial.println("OpenHAK v0.1.0");
+    Serial.println("OpenHAK v1.0.0");
     Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
     getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
     Serial.println("getting battery...");
@@ -181,14 +182,14 @@ void setup()
   SimbleeBLE.advertisementData = "OpenHAK";
   // Device Information Service strings
   SimbleeBLE.manufacturerName = "openhak";
-  SimbleeBLE.hardwareRevision = "0.3.0";
-  SimbleeBLE.softwareRevision = "0.1.0";
+  SimbleeBLE.hardwareRevision = "1.0.0";
+  SimbleeBLE.softwareRevision = "1.0.0";
   Wire.beginOnPins(SCL_PIN, SDA_PIN);
   // change the advertisement interval?
   SimbleeBLE.advertisementInterval = bleInterval;
   SimbleeBLE.begin();
   for(int i=0; i<3; i++){
-    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB and turn them off
+    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB LED and turn them off
   }
 
 /*
@@ -203,8 +204,10 @@ void setup()
 	pulseWidth = PW_411;
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
-	pinMode(MAX_INT,INPUT); // make input-pullup?
-
+	pinMode(MAX_INT,INPUT);
+#ifdef BIO_VILLAGE_BADGE
+    attachPinInterrupt(MAX_INT,MAX_ISR,LOW);
+#endif
 /*
  *  Setup the BMI
  */
@@ -235,13 +238,19 @@ setTime(DEFAULT_TIME);
   delay(400);digitalWrite(BLU, HIGH);
 #endif
 
-delay(2000);
 }
 
 //void bmi160_intr(void)
 //{
 // NOT USING THE BMI DEFINED ITERRUPT VECTOR
 //}
+
+#ifdef BIO_VILLAGE_BADGE
+  int MAX_ISR(uint32_t dummyPin) { // gotta have a dummyPin...
+    MAX_interrupt = true;
+    return 0; // gotta return something, somehow...
+  }
+#endif
 
 void loop()
 {
@@ -273,10 +282,10 @@ void loop()
       Serial.print("Time since last here "); Serial.println(thisTestTime - thatTestTime);
       thatTestTime = thisTestTime;
 #endif
-      updateTime();
+//      updateTime();
       lastTime = millis();
-//      utc = now();  // This works to keep time incrementing that we send to the phone
-//      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
+      utc = now();  // This works to keep time incrementing that we send to the phone
+      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
       samples[currentSample].steps = BMI160.getStepCount();
       memset(arrayBeats, 0, sizeof(arrayBeats));
@@ -286,8 +295,8 @@ void loop()
       printOLED("Capturing Heart Rate",true);
 			resetPulseVariables();
       getTempFlag = true;
-			enableMAX30101(true);
       startTime = millis();
+	enableMAX30101(true);
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }
@@ -295,9 +304,9 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-      samples[currentSample].aux1 = tempInteger; // ADD MAX TEMP DATA HIGH BYTE
-//                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
-//                samples[currentSample].aux3 = analogRead(PIN_4);
+      samples[currentSample].aux1 = tempIntC; // make the option to send Fahrenheit?
+//                samples[currentSample].aux2 = analogRead(PIN_3);  // USER AVAILABLE AUX BYTE
+//                samples[currentSample].aux3 = analogRead(PIN_4);  // USER AVAILABLE AUX BYTE
 
       bpmString = ""; // clear the bpm string
       bpmString += String(samples[currentSample].hr);
@@ -323,7 +332,7 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-      delay(5000);
+      delay(4000);
       digitalWrite(OLED_RESET,LOW);
       awakeTime = millis() - lastTime;
       sleepTimeNow = sleepTime - (HR_TIME / 1000);
@@ -340,7 +349,7 @@ void loop()
         ;
       }
       break;
-    case 2: // modeNum 2 SWITCHES modeNum TO 0 THEN GOES TO SLEEPY
+    case 2: // modeNum 2 switches modeNum to 0 then goes to sleepy
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 2");
 #endif
@@ -348,7 +357,7 @@ void loop()
       sleepTimeNow = sleepTime - (HR_TIME / 1000);
       sleepNow(sleepTimeNow);
       break;
-    case 3: // modeNum 3 TRANSFERS SAMPLES
+    case 3: // modeNum 3 transfers samples
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 3");
 #endif
@@ -360,11 +369,11 @@ void loop()
 #endif
       splashDEFCON();
       delay(4000);
-			String sync = String("Sync me :)       ");
-			sync.setCharAt(13,ble_address.charAt(0));
-			sync.setCharAt(14,ble_address.charAt(1));
-			sync.setCharAt(15,ble_address.charAt(2));
-			sync.setCharAt(16,ble_address.charAt(3));
+      String sync = String("Sync me :)       ");
+      sync.setCharAt(13,ble_address.charAt(0));
+      sync.setCharAt(14,ble_address.charAt(1));
+      sync.setCharAt(15,ble_address.charAt(2));
+      sync.setCharAt(16,ble_address.charAt(3));
       printOLED(sync,false);
       sleepNow(10);	// sleep for 10 seconds
       break;
@@ -377,9 +386,9 @@ void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
-  digitalWrite(OLED_RESET,LOW);
+  if(bConnected){ digitalWrite(OLED_RESET,LOW); }
   enableMAX30101(false);  // shut down MAX
-  long sleepTimeNow = SLEEP_TIME - HR_TIME;
+  long sleepTimeNow = SLEEP_TIME - HR_TIME; // not sure we need this?
   Simblee_ULPDelay(SECONDS(timeNow));
 }
 

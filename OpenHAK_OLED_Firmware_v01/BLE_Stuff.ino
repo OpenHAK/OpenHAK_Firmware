@@ -5,7 +5,7 @@ void SimbleeBLE_onConnect()
   analogWrite(BLU, 100);
   Lazarus.ariseLazarus(); // Tell Lazarus to arise.
 #ifdef SERIAL_LOG
-  Serial.println("ble connected"); 
+  Serial.println("ble connected");
 #endif
   delay(100);
   analogWrite(BLU,255);
@@ -17,7 +17,7 @@ void SimbleeBLE_onDisconnect()
   modeNum = 2;
   analogWrite(GRN,100);
 #ifdef SERIAL_LOG
-  Serial.println("ble disconnected"); 
+  Serial.println("ble disconnected");
 #endif
   delay(100);
   analogWrite(GRN,255);
@@ -37,7 +37,8 @@ void SimbleeBLE_onReceive(char *data, int len) {
       if (len >= 5) {
         unsigned long thyme = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
         setTime(thyme);
-        timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
+        //timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
+        timeZoneOffset = (data[5]);
         minutesOffset = timeZoneOffset;
         minutesOffset *= 10;
         TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};
@@ -45,7 +46,7 @@ void SimbleeBLE_onReceive(char *data, int len) {
         utc = now();    //current time from the Time Library
         localTime = localZone.toLocal(utc);
         setTime(utc);
-//        modeNum = 0;
+        modeNum = 0;
       }
       break;
     case 3:
@@ -67,7 +68,7 @@ void transferSamples() {
       sendSamples(samples[i]);
     }
   }
-  modeNum = 2; // WHAT TO DO HERE? 
+  modeNum = 2; // WHAT TO DO HERE?
 }
 
 
