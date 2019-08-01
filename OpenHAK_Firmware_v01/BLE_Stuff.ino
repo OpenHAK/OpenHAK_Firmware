@@ -37,7 +37,8 @@ void SimbleeBLE_onReceive(char *data, int len) {
       if (len >= 5) {
         unsigned long thyme = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
         setTime(thyme);
-        timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
+        //timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
+        timeZoneOffset = (data[5]);
         minutesOffset = timeZoneOffset;
         minutesOffset *= 10;
         TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};

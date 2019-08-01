@@ -23,7 +23,6 @@
  #define BETA_TESTER 1  // use this for the 2019 beta hardware
  // #define BIO_VILLAGE_BADGE 1 // use this for the BioHacking Village Badge for DEFCON 27
 
-
 #include "OpenHAK_Playground.h"
 #include <filters.h>
 #include <BMI160Gen.h>
@@ -35,8 +34,6 @@
 #include <Wire.h>
 
 
- 
-
 Lazarus Lazarus;
 
 time_t localTime, utc;
@@ -44,7 +41,6 @@ int minutesOffset = 0;
 signed char timeZoneOffset = 0;
 
 QuickStats stats; //initialize an instance of stats class
-
 
   //  TESTING
 #ifdef SERIAL_LOG
@@ -81,6 +77,17 @@ byte writePointer;
 byte ovfCounter;
 uint8_t arrayBeats[100];
 int beatCounter;
+
+////LEIFS ADD????
+long lastTime;
+long awakeTime;
+#ifndef SERIAL_LOG
+int sleepTime = 600; //600 is production
+#else
+int sleepTime = 60; //600 is production
+#endif
+
+/////
 
 
 uint8_t modeNum = 10;
@@ -129,7 +136,9 @@ uint8_t advdata[14] =
   0x43, // 'C' // 12
   0x4f, // 'O' // 13
 };
+
 String ble_address;
+
 // FILTER SEUTP
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
@@ -153,7 +162,7 @@ void setup()
     Serial.println("getting battery...");
     getBatteryVoltage();
 #endif
-  String stringy =  String(getDeviceIdLow(), HEX);
+  ble_address =  String(getDeviceIdLow(), HEX);
   ble_address.toUpperCase();
   advdata[10] = (uint8_t)stringy.charAt(0);
   advdata[11] = (uint8_t)stringy.charAt(1);
@@ -248,6 +257,10 @@ void loop()
     analogWrite(RED, 255);
   }
 
+  long lastTime; // the
+  int sleepTimeNow;
+  uint32_t startTime;
+
   switch (modeNum) {
     case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef SERIAL_LOG
@@ -256,6 +269,7 @@ void loop()
       Serial.print("Time since last here "); Serial.println(thisTestTime - thatTestTime);
       thatTestTime = thisTestTime;
 #endif
+      lastTime = millis();
       utc = now();  // This works to keep time incrementing that we send to the phone
       localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
@@ -298,7 +312,9 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-      sleepNow();
+      awakeTime = millis() - lastTime;
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef SERIAL_LOG
@@ -311,12 +327,13 @@ void loop()
         ;
       }
       break;
-    case 2: // modeNum 2 SWITCHES modeNum TO 0 
+    case 2: // modeNum 2 SWITCHES modeNum TO 0
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepNow();
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 3: // modeNum 3 TRANSFERS SAMPLES
 #ifdef SERIAL_LOG
@@ -329,21 +346,23 @@ void loop()
       Serial.println("Enter modeNum 10");
 #endif
       //modeNum = 0;
-//      digitalWrite(RED, LOW);
-      Simblee_ULPDelay(10000);
+      digitalWrite(RED, LOW);
+      delay(10);
+      sleepNow(10);
+      //Simblee_ULPDelay(10000);
       break;
   }
 }
 
 
 
-void sleepNow() {
+void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
+  Simblee_ULPDelay(SECONDS(timeNow));
 }
 
 

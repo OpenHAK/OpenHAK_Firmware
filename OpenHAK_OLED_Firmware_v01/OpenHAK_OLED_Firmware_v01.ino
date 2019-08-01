@@ -6,17 +6,17 @@ UNLESS, THAT IS, YOU HAVE AN OpenHAK LAYING AROUND
 
 WYSIWYG. NO GUARANTEES OR WARANTEES.
 
-This code targets the OpenHAK BETA hardware.
-Also targets the Biohacking Village DEFCON 27 Badge
-Find the SELECT YOUR VERSION section below to adjust for target
+  This code targets the OpenHAK BETA hardware.
+  Also will target the Biohacking Village DEFCON 27 Badge
+	Find the SELECT YOUR VERSION section below to adjust for target
 
-Made by Joel Murphy and Leif Percifield 2016 and on and on
-www.github.com/OpenHAK
+  Made by Joel Murphy and Leif Percifield 2016 and on and on
+  www.github.com/OpenHAK
 
-			Issue with file size due to DFU set default to dual bank
-			For OTA bootloader bank size adjust go here
-			Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
-			based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
+	      Issue with file size due to DFU set default to dual bank
+	      To adjust OTA bootloader bank size adjust go here
+	      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+	      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
 
 
 */
@@ -84,6 +84,17 @@ uint8_t arrayBeats[100];
 int beatCounter;
 
 
+long lastTime;
+long awakeTime;
+int sleepTimeNow;
+uint32_t startTime;
+#ifndef SERIAL_LOG
+int sleepTime = 600; //600 is production
+#else
+int sleepTime = 60; //600 is production
+#endif
+
+
 uint8_t modeNum = 10;
 bool bConnected = false;
 
@@ -130,6 +141,7 @@ uint8_t advdata[14] =
   0x43, // 'C' // 12
   0x4f, // 'O' // 13
 };
+
 String ble_address;
 
 // FILTER SEUTP
@@ -262,6 +274,7 @@ void loop()
       thatTestTime = thisTestTime;
 #endif
       updateTime();
+      lastTime = millis();
 //      utc = now();  // This works to keep time incrementing that we send to the phone
 //      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
@@ -312,7 +325,9 @@ void loop()
 #endif
       delay(5000);
       digitalWrite(OLED_RESET,LOW);
-      sleepNow();
+      awakeTime = millis() - lastTime;
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef SERIAL_LOG
@@ -330,7 +345,8 @@ void loop()
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepNow();
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 3: // modeNum 3 TRANSFERS SAMPLES
 #ifdef SERIAL_LOG
@@ -349,22 +365,22 @@ void loop()
 			sync.setCharAt(14,ble_address.charAt(1));
 			sync.setCharAt(15,ble_address.charAt(2));
 			sync.setCharAt(16,ble_address.charAt(3));
-      printOLED(sync,false);  // add the advertised hex identifier
-      Simblee_ULPDelay(10000);
+      printOLED(sync,false);
+      sleepNow(10);	// sleep for 10 seconds
       break;
   }
 }
 
 
 
-void sleepNow() {
+void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   digitalWrite(OLED_RESET,LOW);
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
+  Simblee_ULPDelay(SECONDS(timeNow));
 }
 
 
