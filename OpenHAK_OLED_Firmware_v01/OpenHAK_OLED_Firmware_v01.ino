@@ -7,23 +7,25 @@
   WYSIWYG. NO GUARANTEES OR WARANTEES.
 
   This code targets the OpenHAK BETA hardware.
-  Adjustments will be made to target the Biohacking Village DEFCON 27 Badge
+  Also will target the Biohacking Village DEFCON 27 Badge
+	Find the SELECT YOUR VERSION section below to adjust for target
 
-  You should have an OLED screen attached to your OpenHAK to run this code
-
-  Made by Joel Murphy and Leif Percifield 2019 and years prior
+  Made by Joel Murphy and Leif Percifield 2016 and on and on
   www.github.com/OpenHAK
 
-      Issue with file size due to DFU set at dual bank
-      For OTA bootloader bank size adjust go here
-      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
-      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
+	      Issue with file size due to DFU set default to dual bank
+	      To adjust OTA bootloader bank size adjust go here
+	      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+	      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
 
 
 */
 
+ // SELECT YOUR VERSION
+ #define BETA_TESTER 1	// use this for the 2019 beta hardware
+ // #define BIO_VILLAGE_BADGE 1	// use this for the BioHacking Village Badge for DEFCON 27
 #include "OpenHAK.h"
-#include <filters.h> 
+#include <filters.h>
 #include <BMI160Gen.h>
 #include "QuickStats.h"
 #include <Lazarus.h>
@@ -43,7 +45,7 @@ signed char timeZoneOffset = 0;
 QuickStats stats; //initialize an instance of stats class
 MicroOLED oled(OLED_RESET, DC);    // reset pin, I2C address
 String bpmString = "";
-String VERSION = "0.1.0";
+String VERSION = "1.0.0";
 
   //  TESTING
 #ifdef SERIAL_LOG
@@ -80,6 +82,17 @@ byte writePointer;
 byte ovfCounter;
 uint8_t arrayBeats[100];
 int beatCounter;
+
+
+long lastTime;
+long awakeTime;
+int sleepTimeNow;
+uint32_t startTime;
+#ifndef SERIAL_LOG
+int sleepTime = 600; //600 is production
+#else
+int sleepTime = 60; //600 is production
+#endif
 
 
 uint8_t modeNum = 10;
@@ -128,7 +141,7 @@ uint8_t advdata[14] =
   0x43, // 'C' // 12
   0x4f, // 'O' // 13
 };
-
+char ble_address[4];
 // FILTER SEUTP
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
@@ -154,8 +167,9 @@ void setup()
 #endif
 
   splashOLED();
-  
-  String stringy =  String(getDeviceIdLow(), HEX);
+
+  ble_address =  String(getDeviceIdLow(), HEX);
+  ble_address.toUpperCase();
   advdata[10] = (uint8_t)stringy.charAt(0);
   advdata[11] = (uint8_t)stringy.charAt(1);
   advdata[12] = (uint8_t)stringy.charAt(2);
@@ -188,7 +202,7 @@ void setup()
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
- 
+
 /*
  *  Setup the BMI
  */
@@ -257,6 +271,7 @@ void loop()
       thatTestTime = thisTestTime;
 #endif
       updateTime();
+      lastTime = millis();
 //      utc = now();  // This works to keep time incrementing that we send to the phone
 //      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
@@ -307,7 +322,9 @@ void loop()
 #endif
       delay(5000);
       digitalWrite(OLED_RESET,LOW);
-      sleepNow();
+      awakeTime = millis() - lastTime;
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef SERIAL_LOG
@@ -325,7 +342,8 @@ void loop()
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepNow();
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 3: // modeNum 3 TRANSFERS SAMPLES
 #ifdef SERIAL_LOG
@@ -338,22 +356,24 @@ void loop()
       Serial.println("Enter modeNum 10");
 #endif
       printOLED("Sync me :)",false);  // add the advertised hex identifier
-      delay(1000);
-      Simblee_ULPDelay(10000);
+	digitalWrite(RED, LOW);
+      delay(100);
+      sleepNow(10);
+
       break;
   }
 }
 
 
 
-void sleepNow() {
+void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   digitalWrite(OLED_RESET,LOW);
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
+  Simblee_ULPDelay(SECONDS(timeNow));
 }
 
 
