@@ -1,23 +1,42 @@
 
 /*
-  control bytes and register definitions for controling MAX30101
+  control bytes and register definitions for controling stuff
 */
 
-//#define SERIAL_LOG 1
+//#define SERIAL_LOG 1	// use for debuging etc
 
 //  SIMBLEE PINS
-#define RED 24        // red part of LED
-#define GRN 23        // green part of LED
-#define BLU 20        // blue part of LED
-#define MAX_INT 30    // MAX30101 interrupts on this Simblee pin
-#define SCL_PIN 13    // I2C clock pin
-#define SDA_PIN 10    // I2C data pin
-#define BMI_INT1 29
-#define BMI_INT2 28
-#define PIN_25 25     // GPIO
-#define PIN_3 3       // GPIO and Analog pin
-#define PIN_2 2       // GPIO and Analog pin
-#define V_SENSE 5     // Digital 5, AnalogIn 6 measure Battery Level with this pin
+#ifdef BETA_TESTER
+	#define RED 24        // red part of LED
+	#define GRN 23        // green part of LED
+	#define BLU 20        // blue part of LED
+	#define MAX_INT 30    // MAX30101 interrupts on this Simblee pin
+	#define SCL_PIN 13    // I2C clock pin
+	#define SDA_PIN 10    // I2C data pin
+	#define BMI_INT1 29
+	#define BMI_INT2 28
+	#define PIN_25 25     // GPIO
+	#define PIN_3 3       // GPIO and Analog pin
+	#define PIN_2 2       // GPIO and Analog pin
+	#define V_SENSE 5     // Digital 5, AnalogIn 6 measure Battery Level with this pin
+#endif
+
+#ifdef BIO_VILLAGE_BADGE
+	#define RED 20        // red part of LED
+	#define GRN 4         // green part of LED
+	#define BLU 6         // blue part of LED
+	#define MAX_INT 30    // MAX30101 interrupts on this Simblee pin
+	#define SCL_PIN 13    // I2C clock pin
+	#define SDA_PIN 10    // I2C data pin
+	#define BMI_INT1 29
+	#define BMI_INT2 28
+	#define PIN_25 25     // GPIO
+	#define PIN_24	24		// GPIO
+	#define PIN_21	21		//GPIO
+	#define PIN_3 3       // GPIO and Analog pin
+	#define PIN_2 2       // GPIO and Analog pin
+	#define V_SENSE 5     // Digital 5, AnalogIn 6 measure Battery Level with this pin
+#endif
 
 // BMI160 Stuph
 #define BMI_ADD 0x68

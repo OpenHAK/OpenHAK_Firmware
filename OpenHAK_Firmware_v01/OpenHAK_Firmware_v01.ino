@@ -7,15 +7,27 @@
   WYSIWYG. NO GUARANTEES OR WARANTEES.
 
   This code targets the OpenHAK BETA hardware.
-  Adjustments will be made to target the Biohacking Village DEFCON 27 Badge
+  Also will target the Biohacking Village DEFCON 27 Badge
+	Find the SELECT YOUR VERSION section below to adjust for target
 
-  Made by Joel Murphy and Leif Percifield 2019 and years prior
+  Made by Joel Murphy and Leif Percifield 2016 and on
   www.github.com/OpenHAK
+
+	      Issue with file size due to DFU set default to dual bank
+	      For OTA bootloader bank size adjust go here
+	      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+	      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
 
 */
 
-#include "OpenHAK.h"
-#include <filters.h> 
+
+ // SELECT YOUR VERSION
+ #define BETA_TESTER 1	// use this for the 2019 beta hardware
+ // #define BIO_VILLAGE_BADGE 1	// use this for the BioHacking Village Badge for DEFCON 27
+
+
+#include "OpenHAK_Playground.h"
+#include <filters.h>
 #include <BMI160Gen.h>
 #include "QuickStats.h"
 #include <Lazarus.h>
@@ -23,12 +35,6 @@
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
 #include <Wire.h>
-/*
- *  Issue with file size due to DFU set at dual bank
- *  For OTA bootloader bank size adjust go here
- *  Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
- *  based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
- */
 
 Lazarus Lazarus;
 
@@ -132,7 +138,7 @@ uint8_t advdata[14] =
   0x43, // 'C' // 12
   0x4f, // 'O' // 13
 };
-
+char ble_address[4];
 // FILTER SEUTP
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
@@ -156,7 +162,8 @@ void setup()
     Serial.println("getting battery...");
     getBatteryVoltage();
 #endif
-  String stringy =  String(getDeviceIdLow(), HEX);
+  ble_address =  String(getDeviceIdLow(), HEX);
+  ble_address.toUpperCase();
   advdata[10] = (uint8_t)stringy.charAt(0);
   advdata[11] = (uint8_t)stringy.charAt(1);
   advdata[12] = (uint8_t)stringy.charAt(2);
@@ -189,7 +196,7 @@ void setup()
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
- 
+
 /*
  *  Setup the BMI
  */
@@ -248,11 +255,11 @@ void loop()
     delay(600);
     analogWrite(RED, 255);
   }
-  
-  long lastTime; // the 
+
+  long lastTime; // the
   int sleepTimeNow;
   uint32_t startTime;
-  
+
   switch (modeNum) {
     case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef SERIAL_LOG
