@@ -2,6 +2,7 @@
 void SimbleeBLE_onConnect()
 {
   bConnected = true;
+  if(!isSynced) { isSynced = true; }
   analogWrite(BLU, 100);
   Lazarus.ariseLazarus(); // Tell Lazarus to arise.
 #ifdef SERIAL_LOG
@@ -37,15 +38,14 @@ void SimbleeBLE_onReceive(char *data, int len) {
       if (len >= 5) {
         unsigned long thyme = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
         setTime(thyme);
-        //timeZoneOffset = 0xE2; //(data[5]);  // Phone sends UTC offset
         timeZoneOffset = (data[5]);
-        minutesOffset = timeZoneOffset;
+        minutesOffset = int(timeZoneOffset);
         minutesOffset *= 10;
         TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};
         Timezone localZone(localCR, localCR);
         utc = now();    //current time from the Time Library
         localTime = localZone.toLocal(utc);
-        setTime(utc);
+        setTime(localTime);
         modeNum = 0;
       }
       break;

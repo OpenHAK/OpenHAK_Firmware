@@ -287,7 +287,7 @@ void loop()
 			resetPulseVariables();
       getTempFlag = true;
       startTime = millis();
-	enableMAX30101(true);
+	    enableMAX30101(true);
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }

@@ -45,7 +45,7 @@ signed char timeZoneOffset = 0;
 
 QuickStats stats; //initialize an instance of stats class
 MicroOLED oled(OLED_RESET, DC);    // reset pin, I2C address mask, from library
-String bpmString = "";
+String oledString = "";
 String VERSION = "1.0.0";
 
   //  TESTING
@@ -98,6 +98,7 @@ int sleepTime = 60; //600 is production
 
 uint8_t modeNum = 10;
 bool bConnected = false;
+bool isSynced = false;
 
 // interval between advertisement transmissions ms (range is 20ms to 10.24s) - default 20ms
 int bleInterval = 500;  // 675 ms between advertisement transmissions longer time = better battery but slower scan/connect
@@ -169,7 +170,7 @@ void setup()
     getBatteryVoltage();
 #endif
 
-  splashOLED();
+  splashOpenHAK();
 
   ble_address =  String(getDeviceIdLow(), HEX);
   ble_address.toUpperCase();
@@ -237,7 +238,6 @@ setTime(DEFAULT_TIME);
   delay(400);digitalWrite(BLU, LOW);
   delay(400);digitalWrite(BLU, HIGH);
 #endif
-
 }
 
 //void bmi160_intr(void)
@@ -296,7 +296,7 @@ void loop()
 			resetPulseVariables();
       getTempFlag = true;
       startTime = millis();
-	enableMAX30101(true);
+	    enableMAX30101(true);
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }
@@ -308,10 +308,10 @@ void loop()
 //                samples[currentSample].aux2 = analogRead(PIN_3);  // USER AVAILABLE AUX BYTE
 //                samples[currentSample].aux3 = analogRead(PIN_4);  // USER AVAILABLE AUX BYTE
 
-      bpmString = ""; // clear the bpm string
-      bpmString += String(samples[currentSample].hr);
-      bpmString += " BPM";
-      printOLED(bpmString,true);
+      oledString = ""; // clear the oled string
+      oledString += String(samples[currentSample].hr);
+      oledString += " BPM";
+      printOLED(oledString,true);
 
       if (bConnected) {
         sendSamples(samples[currentSample]);
@@ -332,8 +332,11 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-      delay(4000);
-      digitalWrite(OLED_RESET,LOW);
+      delay(3000);
+      oledString = "";  // clear the oled string
+      oledString += String(samples[currentSample].steps);
+      oledString += " Steps";
+      printOLED(oledString,true);
       awakeTime = millis() - lastTime;
       sleepTimeNow = sleepTime - (HR_TIME / 1000);
       sleepNow(sleepTimeNow);
@@ -369,6 +372,8 @@ void loop()
 #endif
       splashDEFCON();
       delay(4000);
+      splashOpenHAK();
+      delay(4000);
       String sync = String("Sync me :)       ");
       sync.setCharAt(13,ble_address.charAt(0));
       sync.setCharAt(14,ble_address.charAt(1));
@@ -386,7 +391,7 @@ void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
-  if(bConnected){ digitalWrite(OLED_RESET,LOW); }
+  if(isSynced) { digitalWrite(OLED_RESET,LOW); }  // turn off the oled unless we are advertising for sync with phone
   enableMAX30101(false);  // shut down MAX
   long sleepTimeNow = SLEEP_TIME - HR_TIME; // not sure we need this?
   Simblee_ULPDelay(SECONDS(timeNow));

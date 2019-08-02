@@ -42,7 +42,7 @@ uint8_t BHV_LOGO [] PROGMEM=
 0x00, 0x00, 0x00, 0x00
 };
 
-void splashOLED(){
+void splashOpenHAK(){
     oled.begin();    // Initialize the OLED
     oled.flipHorizontal(true);
     oled.flipVertical(true);
@@ -115,14 +115,14 @@ void printOLED(String inString, boolean printTime) {
       if (hour12 < 10)  {
         timeString += "0";
       }
-      timeString += hour12;
+      timeString += String(hour12);
       oled.setFontType(FONT_8x16);
       timeString += ":";
       oled.setFontType(SEVEN_SEGMENT);
       if (minute(localTime) < 10) {
         timeString += "0";
       }
-      timeString += minute(localTime);
+      timeString += String(minute(localTime));
       oled.print(timeString);
     }
 
