@@ -1,29 +1,32 @@
 
 
 /*
-  THIS CODE IS NOT INTENDED FOR NEW DESIGNS
-  UNLESS, THAT IS, YOU HAVE AN OpenHAK LAYING AROUND
+THIS CODE IS NOT INTENDED FOR NEW DESIGNS
+UNLESS, THAT IS, YOU HAVE AN OpenHAK LAYING AROUND
 
-  WYSIWYG. NO GUARANTEES OR WARANTEES.
+WYSIWYG. NO GUARANTEES OR WARANTEES.
 
   This code targets the OpenHAK BETA hardware.
-  Adjustments will be made to target the Biohacking Village DEFCON 27 Badge
+  Also will target the Biohacking Village DEFCON 27 Badge
+	Find the SELECT YOUR VERSION section below to adjust for target
 
-  You should have an OLED screen attached to your OpenHAK to run this code
-
-  Made by Joel Murphy and Leif Percifield 2019 and years prior
+  Made by Joel Murphy and Leif Percifield 2016 and on and on
   www.github.com/OpenHAK
 
-      Issue with file size due to DFU set at dual bank
-      For OTA bootloader bank size adjust go here
-      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
-      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
+	      Issue with file size due to DFU set default to dual bank
+	      To adjust OTA bootloader bank size adjust go here
+	      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+	      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
 
 
 */
 
-#include "OpenHAK.h"
-#include <filters.h> 
+// SELECT YOUR VERSION
+// #define BETA_TESTER 1	// use this for the 2019 beta hardware
+#define BIO_VILLAGE_BADGE 1	// use this for the BioHacking Village Badge for DEFCON 27
+
+#include "OpenHAK_Playground.h"
+#include <filters.h>
 #include <BMI160Gen.h>
 #include "QuickStats.h"
 #include <Lazarus.h>
@@ -41,9 +44,9 @@ int minutesOffset = 0;
 signed char timeZoneOffset = 0;
 
 QuickStats stats; //initialize an instance of stats class
-MicroOLED oled(OLED_RESET, DC);    // reset pin, I2C address
-String bpmString = "";
-String VERSION = "0.1.0";
+MicroOLED oled(OLED_RESET, DC);    // reset pin, I2C address mask, from library
+String oledString = "";
+String VERSION = "1.0.0";
 
   //  TESTING
 #ifdef SERIAL_LOG
@@ -51,7 +54,6 @@ String VERSION = "0.1.0";
   unsigned long thatTestTime;
 #endif
 
-uint32_t startTime;
 
 float volts = 0.0;
 
@@ -61,7 +63,8 @@ volatile boolean MAX_interrupt = false;
 short interruptSetting;
 short interruptFlags;
 boolean getTempFlag = false;
-byte tempInteger;
+byte tempIntC;
+byte tempIntF;
 byte tempFraction;
 float Celcius;
 float Fahrenheit;
@@ -82,8 +85,20 @@ uint8_t arrayBeats[100];
 int beatCounter;
 
 
+long lastTime;
+long awakeTime;
+int sleepTimeNow;
+uint32_t startTime;
+#ifndef SERIAL_LOG
+int sleepTime = 600; //600 is production
+#else
+int sleepTime = 60; //600 is production
+#endif
+
+
 uint8_t modeNum = 10;
 bool bConnected = false;
+bool isSynced = false;
 
 // interval between advertisement transmissions ms (range is 20ms to 10.24s) - default 20ms
 int bleInterval = 500;  // 675 ms between advertisement transmissions longer time = better battery but slower scan/connect
@@ -129,15 +144,17 @@ uint8_t advdata[14] =
   0x4f, // 'O' // 13
 };
 
+String ble_address;
+
 // FILTER SEUTP
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
 float LPfilterOutput = 0.0;
-//const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
-//const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
-//const float sampling_time = 0.01; //Sampling time in seconds.
-Filter highPass(0.8, 0.01, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
-Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
+const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
+const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
+const float sampling_time = 0.01; //Sampling time in seconds.
+Filter highPass(HPcutoff_freq, sampling_time, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
+Filter lowPass(LPcutoff_freq, sampling_time,IIR::ORDER::OD1);
 
 
 void setup()
@@ -146,33 +163,34 @@ void setup()
     Serial.begin(9600);
     delay(100);
     Serial.println("starting...");
-    Serial.println("OpenHAK v0.1.0");
+    Serial.println("OpenHAK v1.0.0");
     Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
     getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
     Serial.println("getting battery...");
     getBatteryVoltage();
 #endif
 
-  splashOLED();
-  
-  String stringy =  String(getDeviceIdLow(), HEX);
-  advdata[10] = (uint8_t)stringy.charAt(0);
-  advdata[11] = (uint8_t)stringy.charAt(1);
-  advdata[12] = (uint8_t)stringy.charAt(2);
-  advdata[13] = (uint8_t)stringy.charAt(3);
+  splashOpenHAK();
+
+  ble_address =  String(getDeviceIdLow(), HEX);
+  ble_address.toUpperCase();
+  advdata[10] = (uint8_t)ble_address.charAt(0);
+  advdata[11] = (uint8_t)ble_address.charAt(1);
+  advdata[12] = (uint8_t)ble_address.charAt(2);
+  advdata[13] = (uint8_t)ble_address.charAt(3);
   SimbleeBLE_advdata = advdata;
   SimbleeBLE_advdata_len = sizeof(advdata);
   SimbleeBLE.advertisementData = "OpenHAK";
   // Device Information Service strings
   SimbleeBLE.manufacturerName = "openhak";
-  SimbleeBLE.hardwareRevision = "0.3.0";
-  SimbleeBLE.softwareRevision = "0.1.0";
+  SimbleeBLE.hardwareRevision = "1.0.0";
+  SimbleeBLE.softwareRevision = "1.0.0";
   Wire.beginOnPins(SCL_PIN, SDA_PIN);
   // change the advertisement interval?
   SimbleeBLE.advertisementInterval = bleInterval;
   SimbleeBLE.begin();
   for(int i=0; i<3; i++){
-    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB and turn them off
+    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB LED and turn them off
   }
 
 /*
@@ -187,8 +205,10 @@ void setup()
 	pulseWidth = PW_411;
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
-	pinMode(MAX_INT,INPUT); // make input-pullup?
- 
+	pinMode(MAX_INT,INPUT);
+#ifdef BIO_VILLAGE_BADGE
+    attachPinInterrupt(MAX_INT,MAX_ISR,LOW);
+#endif
 /*
  *  Setup the BMI
  */
@@ -218,13 +238,19 @@ setTime(DEFAULT_TIME);
   delay(400);digitalWrite(BLU, LOW);
   delay(400);digitalWrite(BLU, HIGH);
 #endif
-
 }
 
 //void bmi160_intr(void)
 //{
 // NOT USING THE BMI DEFINED ITERRUPT VECTOR
 //}
+
+#ifdef BIO_VILLAGE_BADGE
+  int MAX_ISR(uint32_t dummyPin) { // gotta have a dummyPin...
+    MAX_interrupt = true;
+    return 0; // gotta return something, somehow...
+  }
+#endif
 
 void loop()
 {
@@ -256,20 +282,21 @@ void loop()
       Serial.print("Time since last here "); Serial.println(thisTestTime - thatTestTime);
       thatTestTime = thisTestTime;
 #endif
-      updateTime();
-//      utc = now();  // This works to keep time incrementing that we send to the phone
-//      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
+//      updateTime();
+      lastTime = millis();
+      utc = now();  // This works to keep time incrementing that we send to the phone
+      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
       samples[currentSample].steps = BMI160.getStepCount();
       memset(arrayBeats, 0, sizeof(arrayBeats));
 #ifdef SERIAL_LOG
       Serial.println("Starting HR capture");
 #endif
-      printOLED("Measuring Heart Rate",true);
+      printOLED("Capturing Heart Rate",true);
 			resetPulseVariables();
       getTempFlag = true;
-			enableMAX30101(true);
       startTime = millis();
+	    enableMAX30101(true);
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }
@@ -277,14 +304,14 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-      samples[currentSample].aux1 = tempInteger; // ADD MAX TEMP DATA HIGH BYTE
-//                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
-//                samples[currentSample].aux3 = analogRead(PIN_4);
+      samples[currentSample].aux1 = tempIntC; // make the option to send Fahrenheit?
+//                samples[currentSample].aux2 = analogRead(PIN_3);  // USER AVAILABLE AUX BYTE
+//                samples[currentSample].aux3 = analogRead(PIN_4);  // USER AVAILABLE AUX BYTE
 
-      bpmString = ""; // clear the bpm string
-      bpmString += String(samples[currentSample].hr);
-      bpmString += " BPM";
-      printOLED(bpmString,true);
+      oledString = ""; // clear the oled string
+      oledString += String(samples[currentSample].hr);
+      oledString += " BPM";
+      printOLED(oledString,true);
 
       if (bConnected) {
         sendSamples(samples[currentSample]);
@@ -305,9 +332,14 @@ void loop()
       Serial.print("Samples Captured: ");
       Serial.println(currentSample);
 #endif
-      delay(5000);
-      digitalWrite(OLED_RESET,LOW);
-      sleepNow();
+      delay(3000);
+      oledString = "";  // clear the oled string
+      oledString += String(samples[currentSample].steps);
+      oledString += " Steps";
+      printOLED(oledString,true);
+      awakeTime = millis() - lastTime;
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
     case 1: // modeNum 1 SEEMS TO CAPTURE THE HEART RATE DATA AND NOT DO ANYTHING TO IT
 #ifdef SERIAL_LOG
@@ -320,14 +352,15 @@ void loop()
         ;
       }
       break;
-    case 2: // modeNum 2 SWITCHES modeNum TO 0 THEN GOES TO SLEEPY
+    case 2: // modeNum 2 switches modeNum to 0 then goes to sleepy
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 2");
 #endif
       modeNum = 0;
-      sleepNow();
+      sleepTimeNow = sleepTime - (HR_TIME / 1000);
+      sleepNow(sleepTimeNow);
       break;
-    case 3: // modeNum 3 TRANSFERS SAMPLES
+    case 3: // modeNum 3 transfers samples
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 3");
 #endif
@@ -337,23 +370,31 @@ void loop()
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 10");
 #endif
-      printOLED("Sync me :)",false);  // add the advertised hex identifier
-      delay(1000);
-      Simblee_ULPDelay(10000);
+      splashDEFCON();
+      delay(4000);
+      splashOpenHAK();
+      delay(4000);
+      String sync = String("Sync me :)       ");
+      sync.setCharAt(13,ble_address.charAt(0));
+      sync.setCharAt(14,ble_address.charAt(1));
+      sync.setCharAt(15,ble_address.charAt(2));
+      sync.setCharAt(16,ble_address.charAt(3));
+      printOLED(sync,false);
+      sleepNow(10);	// sleep for 10 seconds
       break;
   }
 }
 
 
 
-void sleepNow() {
+void sleepNow(long timeNow) {
   analogWrite(RED, 255);
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
-  digitalWrite(OLED_RESET,LOW);
+  if(isSynced) { digitalWrite(OLED_RESET,LOW); }  // turn off the oled unless we are advertising for sync with phone
   enableMAX30101(false);  // shut down MAX
-  long sleepTimeNow = SLEEP_TIME - HR_TIME;
-  Simblee_ULPDelay(MILLISECONDS(sleepTimeNow));
+  long sleepTimeNow = SLEEP_TIME - HR_TIME; // not sure we need this?
+  Simblee_ULPDelay(SECONDS(timeNow));
 }
 
 

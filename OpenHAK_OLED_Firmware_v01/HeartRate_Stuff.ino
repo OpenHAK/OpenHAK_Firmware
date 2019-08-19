@@ -29,30 +29,37 @@ boolean captureHR(uint32_t startTime) {
 #ifdef SERIAL_LOG
     Serial.println("HR capture done");
 #endif
-		enableMAX30101(false);
+    enableMAX30101(false);
     return(false);
   }
-	  interruptFlags = MAX_readInterrupts();
+//#ifdef BIO_VILLAGE_BADGE
+//    if(MAX_interrupt){
+//      serviceInterrupts();
+//    }
+//#endif
+//#ifdef BETA_TESTER
+    interruptFlags = MAX_readInterrupts();
     if(interruptFlags > 0){
-    serveInterrupts(interruptFlags); // go see what woke us up, and do the work
-		if((interruptFlags & PPG_RDY << 8) > 0){  // If we get new PPG data go find the beat
-			while (SimbleeBLE.radioActive) {
-				;
-			}
-    	findBeat(LPfilterOutput);
-    	if(checkQS()){
+      serveInterrupts(interruptFlags); // go see what woke us up, and do the work
+    }
+//#endif
+    if((interruptFlags & (PPG_RDY << 8)) > 0){  // If we get new PPG data go find the beat
+      while (SimbleeBLE.radioActive) {
+        ;
+      }
+      findBeat(LPfilterOutput);
+      if(checkQS()){
 #ifdef SERIAL_LOG
   printBPM();
 #endif
-				arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
-		    beatCounter++;
-    	}
+        arrayBeats[beatCounter] = BPM; // keep track of all the beats we find
+        beatCounter++;
+      }
+    }
       if(getTempFlag){  // use temp data to determine if a body is attached?
         getTempFlag = false;
         MAX30101_writeRegister(TEMP_CONFIG,0x01); // take temperature
       }
-		}
-   }
   return(true);
 }
 
@@ -76,7 +83,7 @@ void resetPulseVariables(){
   amp = 100;                  // beat amplitude 1/10 of input range.
   firstBeat = true;           // looking for the first beat
 //  secondBeat = false;         // not yet looking for the second beat in a row
-  FadeLevel = 0; // LED is dark.
+  FadeLevel = 100; // flash LED at the start of heartrate capture.
   beatCounter = 0;
 }
 
@@ -124,7 +131,7 @@ void findBeat(float Signal){  // this takes 120uS max
 
       BPM = 60000 / IBI; //runningTotal;             // how many beats can fit into a minute? that's BPM!
       QS = true;                              // set Quantified Self flag (we detected a beat)
-      FadeLevel = 0;                          // re-light that LED.
+      FadeLevel = 100;                          // re-light that LED.
     }
   }
 

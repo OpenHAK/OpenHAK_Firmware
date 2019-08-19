@@ -1,21 +1,30 @@
 
 
 /*
-  THIS CODE IS NOT INTENDED FOR NEW DESIGNS
-  UNLESS, THAT IS, YOU HAVE AN OpenHAK LAYING AROUND
+THIS CODE IS NOT INTENDED FOR NEW DESIGNS
+UNLESS, THAT IS, YOU HAVE AN OpenHAK LAYING AROUND
 
-  WYSIWYG. NO GUARANTEES OR WARANTEES.
+WYSIWYG. NO GUARANTEES OR WARANTEES.
 
   This code targets the OpenHAK BETA hardware.
-  Adjustments will be made to target the Biohacking Village DEFCON 27 Badge
+  Also will target the Biohacking Village DEFCON 27 Badge
+	Find the SELECT YOUR VERSION section below to adjust for target
 
-  Made by Joel Murphy and Leif Percifield 2019 and years prior
+  Made by Joel Murphy and Leif Percifield 2016 and on and on
   www.github.com/OpenHAK
 
-*/
+	      Issue with file size due to DFU set default to dual bank
+	      To adjust OTA bootloader bank size adjust go here
+	      Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
+	      based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
 
-#include "OpenHAK.h"
-#include <filters.h> 
+*/
+// SELECT YOUR VERSION
+ #define BETA_TESTER 1  // use this for the 2019 beta hardware
+ // #define BIO_VILLAGE_BADGE 1 // use this for the BioHacking Village Badge for DEFCON 27
+
+#include "OpenHAK_Playground.h"
+#include <filters.h>
 #include <BMI160Gen.h>
 #include "QuickStats.h"
 #include <Lazarus.h>
@@ -23,12 +32,7 @@
 #include <ota_bootloader.h>
 #include <SimbleeBLE.h>
 #include <Wire.h>
-/*
- *  Issue with file size due to DFU set at dual bank
- *  For OTA bootloader bank size adjust go here
- *  Library/Arduino15/packages/OpenHAK/hardware/Simblee/1.1.4/variants/Simblee/ota_bootloader.h
- *  based on advice from https://devzone.nordicsemi.com/f/nordic-q-a/19339/dfu-ota-giving-error-upload-failed-remote-dfu-data-size-exceeds-limit-while-flashing-application
- */
+
 
 Lazarus Lazarus;
 
@@ -44,7 +48,6 @@ QuickStats stats; //initialize an instance of stats class
   unsigned long thatTestTime;
 #endif
 
-uint32_t startTime;
 
 float volts = 0.0;
 
@@ -54,7 +57,8 @@ volatile boolean MAX_interrupt = false;
 short interruptSetting;
 short interruptFlags;
 boolean getTempFlag = false;
-byte tempInteger;
+byte tempIntC;
+byte tempIntF;
 byte tempFraction;
 float Celcius;
 float Fahrenheit;
@@ -77,6 +81,8 @@ int beatCounter;
 ////LEIFS ADD????
 long lastTime;
 long awakeTime;
+int sleepTimeNow;
+uint32_t startTime;
 #ifndef SERIAL_LOG
 int sleepTime = 600; //600 is production
 #else
@@ -133,15 +139,17 @@ uint8_t advdata[14] =
   0x4f, // 'O' // 13
 };
 
+String ble_address;
+
 // FILTER SEUTP
 boolean useFilter = true;
 float HPfilterOutput = 0.0;
 float LPfilterOutput = 0.0;
-//const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
-//const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
-//const float sampling_time = 0.01; //Sampling time in seconds.
-Filter highPass(0.8, 0.01, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
-Filter lowPass(8.0, 0.01,IIR::ORDER::OD1);
+const float HPcutoff_freq = 0.8;  //Cutoff frequency in Hz
+const float LPcutoff_freq = 8.0; // Cutoff frequency in Hz
+const float sampling_time = 0.01; //Sampling time in seconds.
+Filter highPass(HPcutoff_freq, sampling_time, IIR::ORDER::OD1, IIR::TYPE::HIGHPASS);
+Filter lowPass(LPcutoff_freq, sampling_time,IIR::ORDER::OD1);
 
 
 void setup()
@@ -150,30 +158,31 @@ void setup()
     Serial.begin(9600);
     delay(100);
     Serial.println("starting...");
-    Serial.println("OpenHAK v0.1.0");
+    Serial.println("OpenHAK v1.0.0");
     Serial.print("BMI chip ID: 0x"); Serial.println(BMI160.testConnection(),HEX);
     getMAXdeviceInfo(); // prints rev [0x00-0xFF] and device ID [0x15]
     Serial.println("getting battery...");
     getBatteryVoltage();
 #endif
-  String stringy =  String(getDeviceIdLow(), HEX);
-  advdata[10] = (uint8_t)stringy.charAt(0);
-  advdata[11] = (uint8_t)stringy.charAt(1);
-  advdata[12] = (uint8_t)stringy.charAt(2);
-  advdata[13] = (uint8_t)stringy.charAt(3);
+  ble_address =  String(getDeviceIdLow(), HEX);
+  ble_address.toUpperCase();
+  advdata[10] = (uint8_t)ble_address.charAt(0);
+  advdata[11] = (uint8_t)ble_address.charAt(1);
+  advdata[12] = (uint8_t)ble_address.charAt(2);
+  advdata[13] = (uint8_t)ble_address.charAt(3);
   SimbleeBLE_advdata = advdata;
   SimbleeBLE_advdata_len = sizeof(advdata);
   SimbleeBLE.advertisementData = "OpenHAK";
   // Device Information Service strings
   SimbleeBLE.manufacturerName = "openhak";
-  SimbleeBLE.hardwareRevision = "0.3.0";
-  SimbleeBLE.softwareRevision = "0.1.0";
+  SimbleeBLE.hardwareRevision = "1.0.0";
+  SimbleeBLE.softwareRevision = "1.0.0";
   Wire.beginOnPins(SCL_PIN, SDA_PIN);
   // change the advertisement interval?
   SimbleeBLE.advertisementInterval = bleInterval;
   SimbleeBLE.begin();
   for(int i=0; i<3; i++){
-    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB and turn them off
+    pinMode(LEDpin[i],OUTPUT); analogWrite(LEDpin[i],255); // Enable RGB LED and turn them off
   }
 
 /*
@@ -189,7 +198,9 @@ void setup()
 	LEDcurrent = 30;
 	MAX_init(sampleAve, MAX_mode, sampleRange, sampleRate, pulseWidth, LEDcurrent);
 	pinMode(MAX_INT,INPUT); // make input-pullup?
- 
+#ifdef BIO_VILLAGE_BADGE
+    attachPinInterrupt(MAX_INT,MAX_ISR,LOW);
+#endif
 /*
  *  Setup the BMI
  */
@@ -227,6 +238,13 @@ setTime(DEFAULT_TIME);
 // NOT USING THE BMI DEFINED ITERRUPT VECTOR
 //}
 
+#ifdef BIO_VILLAGE_BADGE
+  int MAX_ISR(uint32_t dummyPin) { // gotta have a dummyPin...
+    MAX_interrupt = true;
+    return 0; // gotta return something, somehow...
+  }
+#endif
+
 void loop()
 {
   if (Lazarus.lazarusArising()) {
@@ -248,11 +266,7 @@ void loop()
     delay(600);
     analogWrite(RED, 255);
   }
-  
-  long lastTime; // the 
-  int sleepTimeNow;
-  uint32_t startTime;
-  
+
   switch (modeNum) {
     case 0: // modeNum 0 TAKES HEART RATE, BUILDS DATA PACKET AND SENDS IT, THEN SLEEPS
 #ifdef SERIAL_LOG
@@ -274,8 +288,8 @@ void loop()
 #endif
 			resetPulseVariables();
       getTempFlag = true;
-			enableMAX30101(true);
       startTime = millis();
+	    enableMAX30101(true);
       while (captureHR(startTime)) { // captureHR will run for 30 seconds. Change?
         ;
       }
@@ -283,9 +297,9 @@ void loop()
       samples[currentSample].hr = stats.median(arrayBeats, beatCounter);
       samples[currentSample].hrDev = stats.stdev(arrayBeats, beatCounter);
       samples[currentSample].battery = getBatteryVoltage();
-      samples[currentSample].aux1 = tempInteger; // ADD MAX TEMP DATA HIGH BYTE
-//                samples[currentSample].aux2 = analogRead(PIN_3); // ADD MAX TEMP DATA LOW BYTE
-//                samples[currentSample].aux3 = analogRead(PIN_4);
+ samples[currentSample].aux1 = tempIntC; // make the option to send Fahrenheit?
+//                samples[currentSample].aux2 = analogRead(PIN_3);  // USER AVAILABLE AUX BYTE
+//                samples[currentSample].aux3 = analogRead(PIN_4);  // USER AVAILABLE AUX BYTE
 
       if (bConnected) {
         sendSamples(samples[currentSample]);
@@ -321,7 +335,7 @@ void loop()
         ;
       }
       break;
-    case 2: // modeNum 2 SWITCHES modeNum TO 0 THEN GOES TO SLEEPY
+    case 2: // modeNum 2 switches modeNum to 0 then goes to sleepy
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 2");
 #endif
@@ -329,7 +343,7 @@ void loop()
       sleepTimeNow = sleepTime - (HR_TIME / 1000);
       sleepNow(sleepTimeNow);
       break;
-    case 3: // modeNum 3 TRANSFERS SAMPLES
+    case 3: // modeNum 3 transfers samples
 #ifdef SERIAL_LOG
       Serial.println("Enter modeNum 3");
 #endif
@@ -343,7 +357,6 @@ void loop()
       digitalWrite(RED, LOW);
       delay(10);
       sleepNow(10);
-      //Simblee_ULPDelay(10000);
       break;
   }
 }
@@ -355,7 +368,7 @@ void sleepNow(long timeNow) {
   analogWrite(GRN, 255);  // shut down LEDs
   analogWrite(BLU, 255);
   enableMAX30101(false);  // shut down MAX
-  long sleepTimeNow = SLEEP_TIME - HR_TIME;
+  long sleepTimeNow = SLEEP_TIME - HR_TIME; // not sure we need this?
   Simblee_ULPDelay(SECONDS(timeNow));
 }
 

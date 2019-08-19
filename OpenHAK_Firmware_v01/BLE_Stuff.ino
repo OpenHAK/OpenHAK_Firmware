@@ -46,8 +46,8 @@ void SimbleeBLE_onReceive(char *data, int len) {
         Timezone localZone(localCR, localCR);
         utc = now();    //current time from the Time Library
         localTime = localZone.toLocal(utc);
-        setTime(utc);
-//        modeNum = 0;
+        setTime(localTime);
+        modeNum = 0;
       }
       break;
     case 3:

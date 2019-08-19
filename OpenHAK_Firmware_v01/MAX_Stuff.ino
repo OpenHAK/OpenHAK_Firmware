@@ -13,7 +13,7 @@
    * PW_69, PW_118, PW_215, PW_411
  * LED Current
    * 0 - 50mA
- * 
+ *
  *  Sample Average effects Sample Rate
    *  sa of 4 and sr of 400 = actual sample rate of 100
  *  Pulse Width effects resolution
@@ -64,13 +64,13 @@ void getMAXdeviceInfo(){
   Serial.print("MAX rev: 0x");
   Serial.println(revID,HEX);
   Serial.print("MAX part ID: 0x");
-  Serial.println(partID,HEX); 
+  Serial.println(partID,HEX);
 #endif
 }
 
-// read interrupt flags and do the work to service them
+// >>>> USE THIS WHEN THE MAX HARDWARE INTERRUPT IS WORKING
 void serviceInterrupts(){
-    MAX_interrupt = false;  // reset this software flag
+    MAX_interrupt = false;  // reset this interrupt flag
     interruptFlags = MAX_readInterrupts();  // read interrupt registers
     if((interruptFlags & (A_FULL<<8)) > 0){ // FIFO Almost Full
 #ifdef SERIAL_LOG
@@ -79,19 +79,16 @@ void serviceInterrupts(){
       // do something?
     }
     if((interruptFlags & (PPG_RDY<<8)) > 0){ // PPG data ready
-//      Serial.println("PPG_RDY");
-//      readPointers();
       readPPG();  // read the light sensor data that is available
-      serialPPG(); // send the RED and/or IR data
+      filterPPG(); // band pass filter the PPG signal
     }
     if((interruptFlags & (ALC_OVF<<8)) > 0){ // Ambient Light Cancellation Overflow
 #ifdef SERIAL_LOG
-  Serial.println("ALC_OVF"); 
+  Serial.println("ALC_OVF");
 #endif
       // do something?
     }
     if((interruptFlags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
-//      Serial.println("TEMP_RDY");
       getTemp();
 #ifdef SERIAL_LOG
   printTemp();
@@ -104,6 +101,7 @@ void serviceInterrupts(){
     }
 }
 
+//  >>> USE THIS WHEN THE MAX INTERRUPT IS NOT WORKING
 void serveInterrupts(uint16_t flags){
     MAX_interrupt = false;  // reset this software flag
     if((flags & (A_FULL<<8)) > 0){ // FIFO Almost Full
@@ -113,8 +111,6 @@ void serveInterrupts(uint16_t flags){
       // do something?
     }
     if((flags & (PPG_RDY<<8)) > 0){ // PPG data ready
-//      Serial.println("PPG_RDY");
-//      readPointers();
       readPPG();   // read the light sensor data that is available
       filterPPG(); // band pass filter the PPG signal
     }
@@ -125,7 +121,6 @@ void serveInterrupts(uint16_t flags){
       // do something?
     }
     if((flags & (TEMP_RDY)) > 0){  // Temperature Conversion Available
-//      Serial.println("TEMP_RDY");
       getTemp();
 #ifdef SERIAL_LOG
   printTemp();
@@ -158,11 +153,12 @@ int readPointers(){
 
 //  read die temperature to compansate for RED LED
 void getTemp(){
-  tempInteger = MAX30101_readRegister(TEMP_INT);
+  tempIntC = MAX30101_readRegister(TEMP_INT);
   tempFraction = MAX30101_readRegister(TEMP_FRAC);
-  Celcius = float(tempInteger);
+  Celcius = float(tempIntC);
   Celcius += (float(tempFraction)/16);
-  Fahrenheit = Celcius*1.8 + 32;
+  Fahrenheit = Celcius*1.8 + 32.0;
+  tempIntF = int(Fahrenheit);
 }
 
 void printTemp(){
@@ -184,30 +180,24 @@ void readPPG(){
 
 // send PPG value(s) via Serial port
 void serialPPG(){
-#ifdef SERIAL_LOG
     Serial.print(MAXsampleCounter,DEC); printTab();
     Serial.print(REDvalue); printTab();
     Serial.println(IRvalue);
-#endif
 }
 
 void filterPPG(){
   int Red_IR = REDvalue + IRvalue;
-//  if(useFilter){
 //      thatTestTime = micros();  // USE TO TIME FILTER MATH
     HPfilterOutput = highPass.filterIn(Red_IR); // HighPass takes about 110uS
     LPfilterOutput = lowPass.filterIn(HPfilterOutput);  // BandPass takes about 140uS
 //      thisTestTime = micros(); Serial.print(thisTestTime - thatTestTime);
+//#ifdef SERIAL_LOG
 //      Serial.println(LPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(HPfilterOutput,1); // try to reduce noise in low bits
 //      Serial.println(Red_IR);
-//  } else {
-//#ifdef SERIAL_LOG
+//#endif
 //  Serial.println(Red_IR);
 //#endif
-//      printSpace();
-//      Serial.print(IRvalue);
-//  }
 }
 
 // read in the FIFO data three bytes per ADC result
@@ -237,8 +227,7 @@ void readFIFOdata(){
     dataByte[byteCounter] = Wire.read();
     byteCounter++;
   }
-  Wire.endTransmission(true);
-  REDvalue = 0L; 
+  REDvalue = 0L;
   REDvalue = (dataByte[0] & 0xFF); REDvalue <<= 8;
   REDvalue |= dataByte[1]; REDvalue <<= 8;
   REDvalue |= dataByte[2];
@@ -355,7 +344,6 @@ byte MAX30101_readRegister(byte reg){
   while(Wire.available()){
     inByte = Wire.read();
   }
-  Wire.endTransmission(true);
  return inByte;
 }
 
@@ -372,7 +360,6 @@ short MAX30101_readShort(byte startReg){
     inByte[byteCounter] = Wire.read();
     byteCounter++;
   }
-  Wire.endTransmission(true);
   shorty = (inByte[0]<<8) | inByte[1];
  return shorty;
 }
@@ -384,26 +371,22 @@ void printAllRegisters(){
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,7);
   readWireAndPrintHex(STATUS_1);
-  Wire.endTransmission(true);
   Wire.beginTransmission(MAX_ADD);
   Wire.write(FIFO_CONFIG);
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,11);
   readWireAndPrintHex(FIFO_CONFIG);
-  Wire.endTransmission(true);
   Wire.beginTransmission(MAX_ADD);
   Wire.write(TEMP_INT);
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,3);
   readWireAndPrintHex(TEMP_INT);
-  Wire.endTransmission(true);
 
   Wire.beginTransmission(MAX_ADD);
   Wire.write(REV_ID);
   Wire.endTransmission(false);
   Wire.requestFrom(MAX_ADD,2);
   readWireAndPrintHex(REV_ID);
-  Wire.endTransmission(true);
 }
 
 // helps to print out register values
@@ -413,7 +396,7 @@ void readWireAndPrintHex(byte startReg){
   while(Wire.available()){
     inByte = Wire.read();
     printRegName(startReg); startReg++;
-    Serial.print("0x"); 
+    Serial.print("0x");
     if(inByte < 0x10){ Serial.print("0"); }
     Serial.println(inByte,HEX);
   }

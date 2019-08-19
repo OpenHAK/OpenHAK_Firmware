@@ -4,11 +4,13 @@ Latest Firmware release for targeting OpenHAK **beta** hardware.The OpenHAK is b
 ## Libraries, etc.
 This is an Arduino .INO file, and it uses tabs so make sure you have all the tabs
 
-`OpenHAK_Firmware_vxxx | BLE_Stuff | HeartRate_Stuff | MAX_Stuff | OpenHAK.h`
+`OpenHAK_Firmware_vxxx | BLE_Stuff | HeartRate_Stuff | MAX_Stuff`
 
 You will also need to ensure that you have the **board files** for the OpenHAK. Please go [here](https://github.com/OpenHAK/Docs/blob/master/Getting%20Started%20With%20Arduino.md) to learn how to do that and do it. When it doubt, reboot.
 
 ### Libraries You Will Need
+OpenHAK is in the process of building a library called [OpenHAK Playground](https://github.com/OpenHAK/OpenHAK_Playground) Download that and put it into your `Documents/Arduino/libraries` folder.
+
 We're using a filter library for DSP on the MAX30101 signal. It's called [libFilter](https://github.com/MartinBloedorn/libFilter). Download it and install it in your `Documents/Arduino/libraries` folder.
 
 You also need a BMI160 library. We're using [hanyazou's](https://github.com/hanyazou/BMI160-Arduino) code, but it's old and we're open to new ideas.
@@ -17,10 +19,15 @@ We modified a number-cruncher library called [QuickStats](https://github.com/Ope
 
 Then you need to get [Lazarus](https://github.com/OpenHAK/lazarus). It lets us put the Simblee into deep sleep so the battery doesn't run dry.
 
-The rest is a piece of cake. The `<Timezone.h>` library is available though the Library Manager tool, and the rest comes with the OpenHAK board files that you installed in the previous step.
+The `<Timezone.h>` library is available though the Library Manager tool, and the rest comes with the OpenHAK board files that you installed in the previous step.
+
+If your OpenHAK comes with an OLED screen attached, then you need the [OpenHAK_MicroOLED](https://github.com/OpenHAK/OpenHAK_MicroOLED) library too.
+
+### Important Thing To Know
+The OpenHAK Playground library will target two hardware versions. Make sure that you select the right one at the top of the sketch, or you will loose some LED and GPIO functionality!
 
 ## Status
-Remains a work in progress in the Summer of '19 in anticipation of being the badge for the BoiHacking Village at DEFCON27. Work is also being done toward a crowdfunding campaign. The BioHacking Village Badge will be sporting a display. Notes about that will be forthcoming, but we're likely to use well known OLED and graphics libraries.
+Remains a work in progress in the Summer of '19 in anticipation of being the badge for the BioHacking Village at DEFCON27. To that end, we have added a firmware version that controls a 64x48 OLED screen, which will be part of the BioHacking Village Badge. Work is also being done toward a crowdfunding campaign. 
 
 ## Structure
 
