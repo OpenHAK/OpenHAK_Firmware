@@ -263,12 +263,14 @@ void loop()
 #endif
       lastTime = millis();
       utc = now();  // This works to keep time incrementing that we send to the phone
-      localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
+      //localTime = utc + (minutesOffset/60); // This does not work to keep track of time we pring on screen??
       samples[currentSample].epoch = utc;  // Send utc time to the phone. Phone will manage timezone, etc.
       samples[currentSample].steps = BMI160.getStepCount();
       memset(arrayBeats, 0, sizeof(arrayBeats));
 #ifdef SERIAL_LOG
       Serial.println("Starting HR capture");
+      Serial.print("Local Time: "); Serial.println(digitalClockDisplay());
+      Serial.print("UTC Time: "); Serial.println(utc);
 #endif
 			resetPulseVariables();
       getTempFlag = true;

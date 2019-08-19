@@ -41,6 +41,7 @@ void SimbleeBLE_onReceive(char *data, int len) {
         timeZoneOffset = (data[5]);
         minutesOffset = timeZoneOffset;
         minutesOffset *= 10;
+        //Serial.println(minutesOffset);
         TimeChangeRule localCR = {"TCR", First, Sun, Nov, 2, minutesOffset};
         Timezone localZone(localCR, localCR);
         utc = now();    //current time from the Time Library
